@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db'
 import { JWT } from 'next-auth/jwt'
+import { AdapterUser } from 'next-auth/adapters'
 
 interface User {
   id: string;
@@ -71,7 +72,7 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
   },
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: User }) {
+    async jwt({ token, user, account, profile }: { token: JWT; user?: AdapterUser; account?: any; profile?: any }) {
       if (user) {
         token.id = user.id
       }
