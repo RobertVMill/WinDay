@@ -1,7 +1,48 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const entries = await prisma.entry.findMany({
+      where: {
+        userId: session.user.id
+      },
+      include: {
+        template: {
+          include: {
+            fields: {
+              orderBy: {
+                order: 'asc'
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        date: 'desc'
+      }
+    })
+
+    return NextResponse.json(entries)
+  } catch (error: any) {
+    console.error('Failed to fetch entries:', error)
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch entries' },
+      { status: 500 }
+    )
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -49,64 +90,32 @@ export async function POST(request: Request) {
     }
 
     // Create the journal entry
-    const entry = await prisma.journalEntry.create({
+    const entry = await prisma.entry.create({
       data: {
         date: new Date(),
-        content: JSON.stringify(body.content),
-        templateId: body.templateId,
+        content: body.content,
         userId: session.user.id,
+        templateId: body.templateId
       },
+      include: {
+        template: {
+          include: {
+            fields: {
+              orderBy: {
+                order: 'asc'
+              }
+            }
+          }
+        }
+      }
     })
 
     console.log('Created journal entry:', entry)
     return NextResponse.json(entry)
   } catch (error: any) {
-    console.error('Failed to create journal entry:', error.message || error)
+    console.error('Failed to create entry:', error)
     return NextResponse.json(
-      { error: 'Failed to create journal entry' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const entries = await prisma.journalEntry.findMany({
-      where: {
-        userId: session.user.id,
-      },
-      include: {
-        template: {
-          include: {
-            fields: true,
-          },
-        },
-      },
-      orderBy: {
-        date: 'desc',
-      },
-    })
-
-    // Parse the content JSON for each entry
-    const formattedEntries = entries.map(entry => ({
-      ...entry,
-      content: JSON.parse(entry.content),
-    }))
-
-    return NextResponse.json(formattedEntries)
-  } catch (error: any) {
-    console.error('Failed to fetch journal entries:', error.message || error)
-    return NextResponse.json(
-      { error: 'Failed to fetch journal entries' },
+      { error: error.message || 'Failed to create entry' },
       { status: 500 }
     )
   }
