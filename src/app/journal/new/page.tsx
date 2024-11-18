@@ -21,6 +21,8 @@ interface Template {
   name: string;
   description?: string;
   fields: TemplateField[];
+  userId: string;
+  isPublic: boolean;
 }
 
 export default function NewJournalEntry() {
