@@ -14,6 +14,13 @@ export async function POST(request: Request) {
       )
     }
 
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters long' },
+        { status: 400 }
+      )
+    }
+
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -32,7 +39,7 @@ export async function POST(request: Request) {
     // Create user
     const user = await prisma.user.create({
       data: {
-        name,
+        name: name || null,
         email,
         password: hashedPassword,
       },
@@ -41,11 +48,23 @@ export async function POST(request: Request) {
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user
 
-    return NextResponse.json(userWithoutPassword)
-  } catch (error) {
+    return NextResponse.json({
+      user: userWithoutPassword,
+      message: 'User created successfully'
+    })
+  } catch (error: any) {
     console.error('Error in signup:', error)
+    
+    // Check for Prisma-specific errors
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'This email is already registered' },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
-      { error: 'Something went wrong' },
+      { error: 'Something went wrong during signup. Please try again.' },
       { status: 500 }
     )
   }
