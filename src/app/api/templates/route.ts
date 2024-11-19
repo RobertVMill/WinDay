@@ -8,7 +8,13 @@ const ADMIN_EMAIL = 'bertmill19@gmail.com'
 // Helper function to check if user is admin
 async function isAdmin() {
   const session = await getServerSession(authOptions)
-  return session?.user?.email === ADMIN_EMAIL
+  const userEmail = session?.user?.email
+
+  if (!userEmail) {
+    return false
+  }
+
+  return userEmail === ADMIN_EMAIL
 }
 
 // GET all templates (admin only)
@@ -22,8 +28,17 @@ export async function GET(request: NextRequest) {
     }
 
     const session = await getServerSession(authOptions)
+    const userEmail = session?.user?.email
+
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const user = await prisma.user.findUnique({
-      where: { email: session?.user?.email! }
+      where: { email: userEmail }
     })
 
     if (!user) {
@@ -97,8 +112,17 @@ export async function POST(request: NextRequest) {
     }
 
     const session = await getServerSession(authOptions)
+    const userEmail = session?.user?.email
+
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const user = await prisma.user.findUnique({
-      where: { email: session?.user?.email! }
+      where: { email: userEmail }
     })
 
     if (!user) {
@@ -166,8 +190,17 @@ export async function PUT(request: NextRequest) {
     }
 
     const session = await getServerSession(authOptions)
+    const userEmail = session?.user?.email
+
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const user = await prisma.user.findUnique({
-      where: { email: session?.user?.email! }
+      where: { email: userEmail }
     })
 
     if (!user) {
@@ -246,8 +279,17 @@ export async function DELETE(request: NextRequest) {
     }
 
     const session = await getServerSession(authOptions)
+    const userEmail = session?.user?.email
+
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const user = await prisma.user.findUnique({
-      where: { email: session?.user?.email! }
+      where: { email: userEmail }
     })
 
     if (!user) {
