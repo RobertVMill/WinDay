@@ -79,14 +79,14 @@ export default function Navbar() {
                   Templates
                 </Link>
                 <Link
-                  href="/quotes/new"
+                  href="/quotes"
                   className={`inline-flex items-center px-1 pt-1 border-b-2 ${
-                    pathname === '/quotes/new'
+                    pathname === '/quotes'
                       ? 'border-blue-500 text-gray-900'
-                      : 'border-transparent ' + isActive('/quotes/new')
+                      : 'border-transparent ' + isActive('/quotes')
                   }`}
                 >
-                  Add Quote
+                  Quotes
                 </Link>
               </div>
             )}

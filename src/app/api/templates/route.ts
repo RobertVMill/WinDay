@@ -1,226 +1,179 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+const ADMIN_EMAIL = 'bertmill19@gmail.com'
 
-    const templates = await prisma.template.findMany({
-      where: {
-        OR: [
-          { userId: session.user.id },  // User's own templates
-          { isPublic: true },          // Public templates
-        ],
-      },
-      include: {
-        fields: {
-          orderBy: {
-            order: 'asc',
-          },
-        },
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    })
-
-    return NextResponse.json(templates)
-  } catch (error: any) {
-    console.error('Failed to fetch templates:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to fetch templates' },
-      { status: 500 }
-    )
-  }
+// Helper function to check if user is admin
+async function isAdmin() {
+  const session = await getServerSession(authOptions)
+  return session?.user?.email === ADMIN_EMAIL
 }
 
-export async function POST(request: Request) {
+// GET all templates (admin only)
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
+    if (!await isAdmin()) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    const body = await request.json()
-    console.log('Received template data:', body)
-
-    const { name, description, fields } = body
-
-    if (!name?.trim() || !Array.isArray(fields) || fields.length === 0) {
-      return NextResponse.json(
-        { error: 'Name and at least one field are required' },
-        { status: 400 }
-      )
-    }
-
-    try {
-      // Clean up field data before saving
-      const cleanFields = fields.map((field: any, index: number) => ({
-        name: field.name.trim(),
-        label: field.label.trim(),
-        type: field.type,
-        required: Boolean(field.required),
-        order: index,
-        default: field.default?.trim() || null,
-        placeholder: field.placeholder?.trim() || null,
-      }))
-
-      const template = await prisma.template.create({
-        data: {
-          name: name.trim(),
-          description: description?.trim() || '',
-          content: '',
-          isPublic: false,
-          userId: session.user.id,
-          fields: {
-            create: cleanFields,
-          },
-        },
-        include: {
-          fields: {
-            orderBy: {
-              order: 'asc',
-            },
-          },
-        },
-      })
-
-      console.log('Created template:', template)
-      return NextResponse.json(template)
-    } catch (dbError: any) {
-      console.error('Database error:', dbError)
-      if (dbError.code === 'P2002') {
-        return NextResponse.json(
-          { error: 'A template with this name already exists' },
-          { status: 400 }
-        )
-      }
-      throw dbError
-    }
-  } catch (error: any) {
-    console.error('Failed to create template:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to create template' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function PUT(request: Request) {
-  try {
     const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const body = await request.json()
-    console.log('Updating template:', body)
-
-    const { id, name, description, fields, isPublic } = body
-
-    if (!id || !name?.trim() || !Array.isArray(fields) || fields.length === 0) {
-      return NextResponse.json(
-        { error: 'Id, name, and at least one field are required' },
-        { status: 400 }
-      )
-    }
-
-    // Check if the user owns the template
-    const existingTemplate = await prisma.template.findUnique({
-      where: { id },
+    const user = await prisma.user.findUnique({
+      where: { email: session?.user?.email! }
     })
 
-    if (!existingTemplate || existingTemplate.userId !== session.user.id) {
+    if (!user) {
       return NextResponse.json(
-        { error: 'Template not found or unauthorized' },
+        { error: 'User not found' },
         { status: 404 }
       )
     }
 
-    try {
-      // Clean up field data before saving
-      const cleanFields = fields.map((field: any, index: number) => ({
-        name: field.name.trim(),
-        label: field.label.trim(),
-        type: field.type,
-        required: Boolean(field.required),
-        order: index,
-        default: field.default?.trim() || null,
-        placeholder: field.placeholder?.trim() || null,
-      }))
+    // Check if we're getting a specific template
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
 
-      // First, delete existing fields
-      await prisma.templateField.deleteMany({
-        where: { templateId: id },
-      })
-
-      // Then update the template and create new fields
-      const template = await prisma.template.update({
+    if (id) {
+      const template = await prisma.template.findUnique({
         where: { id },
-        data: {
-          name: name.trim(),
-          description: description?.trim() || '',
-          isPublic: Boolean(isPublic),
-          content: '',
-          fields: {
-            create: cleanFields,
-          },
-        },
         include: {
           fields: {
             orderBy: {
-              order: 'asc',
-            },
-          },
-        },
+              order: 'asc'
+            }
+          }
+        }
       })
 
-      console.log('Updated template:', template)
-      return NextResponse.json(template)
-    } catch (dbError: any) {
-      console.error('Database error:', dbError)
-      if (dbError.code === 'P2002') {
+      if (!template) {
         return NextResponse.json(
-          { error: 'A template with this name already exists' },
-          { status: 400 }
+          { error: 'Template not found' },
+          { status: 404 }
         )
       }
-      throw dbError
+
+      return NextResponse.json(template)
     }
+
+    // Get all templates
+    const templates = await prisma.template.findMany({
+      where: {
+        userId: user.id
+      },
+      include: {
+        fields: {
+          orderBy: {
+            order: 'asc'
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    return NextResponse.json(templates)
   } catch (error: any) {
-    console.error('Failed to update template:', error)
+    console.error('Error fetching templates:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to update template' },
+      { error: 'Failed to fetch templates' },
       { status: 500 }
     )
   }
 }
 
-export async function DELETE(request: Request) {
+// POST new template (admin only)
+export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
+    if (!await isAdmin()) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      )
+    }
+
+    const session = await getServerSession(authOptions)
+    const user = await prisma.user.findUnique({
+      where: { email: session?.user?.email! }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    const body = await request.json()
+    const { name, description, isPublic, fields } = body
+
+    if (!name?.trim()) {
+      return NextResponse.json(
+        { error: 'Template name is required' },
+        { status: 400 }
+      )
+    }
+
+    // Create template with fields
+    const newTemplate = await prisma.template.create({
+      data: {
+        name: name.trim(),
+        description: description?.trim() || null,
+        content: JSON.stringify(fields), // Store fields in content for templates page
+        isPublic: isPublic ?? false,
+        userId: user.id,
+        fields: {
+          create: fields.map((field: any) => ({
+            name: field.name,
+            label: field.label,
+            type: field.type,
+            required: field.required,
+            order: field.order
+          }))
+        }
+      },
+      include: {
+        fields: {
+          orderBy: {
+            order: 'asc'
+          }
+        }
+      }
+    })
+
+    return NextResponse.json(newTemplate)
+  } catch (error: any) {
+    console.error('Error creating template:', error)
+    return NextResponse.json(
+      { error: 'Failed to create template' },
+      { status: 500 }
+    )
+  }
+}
+
+// PUT (update) template (admin only)
+export async function PUT(request: NextRequest) {
+  try {
+    if (!await isAdmin()) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const session = await getServerSession(authOptions)
+    const user = await prisma.user.findUnique({
+      where: { email: session?.user?.email! }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
       )
     }
 
@@ -234,12 +187,91 @@ export async function DELETE(request: Request) {
       )
     }
 
-    // Check if the user owns the template
-    const template = await prisma.template.findUnique({
+    const body = await request.json()
+    const { name, description, isPublic, fields } = body
+
+    if (!name?.trim()) {
+      return NextResponse.json(
+        { error: 'Template name is required' },
+        { status: 400 }
+      )
+    }
+
+    // Update template and its fields
+    const updatedTemplate = await prisma.template.update({
       where: { id },
+      data: {
+        name: name.trim(),
+        description: description?.trim() || null,
+        content: JSON.stringify(fields), // Store fields in content for templates page
+        isPublic: isPublic ?? false,
+        fields: {
+          deleteMany: {}, // Remove old fields
+          create: fields.map((field: any) => ({
+            name: field.name,
+            label: field.label,
+            type: field.type,
+            required: field.required,
+            order: field.order
+          }))
+        }
+      },
+      include: {
+        fields: {
+          orderBy: {
+            order: 'asc'
+          }
+        }
+      }
     })
 
-    if (!template || template.userId !== session.user.id) {
+    return NextResponse.json(updatedTemplate)
+  } catch (error: any) {
+    console.error('Error updating template:', error)
+    return NextResponse.json(
+      { error: 'Failed to update template' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE template (admin only)
+export async function DELETE(request: NextRequest) {
+  try {
+    if (!await isAdmin()) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const session = await getServerSession(authOptions)
+    const user = await prisma.user.findUnique({
+      where: { email: session?.user?.email! }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Template ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const template = await prisma.template.findUnique({
+      where: { id }
+    })
+
+    if (!template || template.userId !== user.id) {
       return NextResponse.json(
         { error: 'Template not found or unauthorized' },
         { status: 404 }
@@ -247,15 +279,14 @@ export async function DELETE(request: Request) {
     }
 
     await prisma.template.delete({
-      where: { id },
+      where: { id }
     })
 
-    console.log('Deleted template:', id)
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('Failed to delete template:', error)
+    console.error('Error deleting template:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to delete template' },
+      { error: 'Failed to delete template' },
       { status: 500 }
     )
   }
