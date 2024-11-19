@@ -43,7 +43,7 @@ export default function Navbar() {
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-xl font-bold text-gray-900">
-                DayFlow
+                WinDay
               </Link>
             </div>
             {status === 'authenticated' && (
@@ -77,6 +77,16 @@ export default function Navbar() {
                   }`}
                 >
                   Templates
+                </Link>
+                <Link
+                  href="/quotes/new"
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 ${
+                    pathname === '/quotes/new'
+                      ? 'border-blue-500 text-gray-900'
+                      : 'border-transparent ' + isActive('/quotes/new')
+                  }`}
+                >
+                  Add Quote
                 </Link>
               </div>
             )}
