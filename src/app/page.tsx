@@ -59,14 +59,19 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900">
         <div className="max-w-2xl text-center space-y-8">
-          <h1 className="text-4xl font-bold text-gray-900">
-            DayFlow
-          </h1>
-          <p className="text-xl text-gray-600">
-            Your daily companion for reflection, gratitude, and growth
-          </p>
+          <div className="relative">
+            <h1 className="text-6xl font-extrabold text-white tracking-tight">
+              WinDay
+              <span className="absolute -top-4 -right-4 w-8 h-8 bg-yellow-400 transform rotate-12 rounded-sm" 
+                    style={{ clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)' }}>
+              </span>
+            </h1>
+            <p className="text-xl text-blue-200 mt-4 font-medium">
+              Win Every Day Like a Champion 🏆
+            </p>
+          </div>
           
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 p-4 text-red-700">
@@ -79,52 +84,52 @@ export default function Home() {
               <div className="flex flex-col gap-4 items-center">
                 <Link 
                   href="/journal/new" 
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition w-full max-w-md"
+                  className="bg-yellow-400 text-blue-900 px-8 py-4 rounded-lg hover:bg-yellow-300 transition w-full max-w-md font-bold text-lg transform hover:scale-105 hover:shadow-xl"
                 >
-                  Start Today&apos;s Entry
+                  🏅 Start Today&apos;s Entry
                 </Link>
                 <Link
                   href="/journal" 
-                  className="bg-white text-gray-900 px-6 py-3 rounded-lg border hover:bg-gray-50 transition w-full max-w-md"
+                  className="bg-white/10 backdrop-blur-sm text-white px-8 py-4 rounded-lg border border-white/20 hover:bg-white/20 transition w-full max-w-md font-semibold"
                 >
-                  View Journal
+                  View Your Legacy
                 </Link>
               </div>
             ) : (
               <div className="space-y-8">
-                <div className="bg-white border rounded-lg p-6 space-y-6">
-                  <h2 className="text-2xl font-semibold text-gray-900">Welcome to Your Journal!</h2>
-                  <p className="text-gray-600">
-                    Let&apos;s start by creating your personal journal template. You can:
+                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-8 space-y-6">
+                  <h2 className="text-3xl font-bold text-white">Time to Build Your Legacy! 🌟</h2>
+                  <p className="text-blue-200">
+                    Choose your path to greatness:
                   </p>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h3 className="font-medium text-gray-900 mb-2">Start from Scratch</h3>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Create your own custom template with exactly the sections you want.
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="bg-blue-800/50 p-6 rounded-lg transform hover:scale-105 transition">
+                      <h3 className="font-bold text-yellow-400 text-xl mb-3">Create Your Playbook</h3>
+                      <p className="text-blue-200 mb-4">
+                        Design your custom template like a champion crafting their perfect game plan.
                       </p>
                       <Link
                         href="/template-builder"
-                        className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm"
+                        className="inline-block bg-yellow-400 text-blue-900 px-6 py-3 rounded-lg hover:bg-yellow-300 transition font-bold"
                       >
-                        Create Custom Template
+                        Build Your Strategy
                       </Link>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h3 className="font-medium text-gray-900 mb-2">Use a Template</h3>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Browse our collection of pre-made templates and customize them.
+                    <div className="bg-blue-800/50 p-6 rounded-lg transform hover:scale-105 transition">
+                      <h3 className="font-bold text-yellow-400 text-xl mb-3">Choose a Winning Template</h3>
+                      <p className="text-blue-200 mb-4">
+                        Start with proven strategies from our championship collection.
                       </p>
                       <Link
                         href="/templates"
-                        className="inline-block bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition text-sm"
+                        className="inline-block bg-white/10 text-white px-6 py-3 rounded-lg hover:bg-white/20 transition font-bold"
                       >
                         Browse Templates
                       </Link>
                     </div>
                   </div>
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-blue-200">
                   You can always create more templates or modify existing ones later.
                 </div>
               </div>
