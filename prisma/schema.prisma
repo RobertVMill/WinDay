@@ -24,6 +24,7 @@ model User {
   updatedAt     DateTime   @updatedAt
   templates     Template[]
   entries       Entry[]
+  quotes        Quote[]
 }
 
 model Template {
@@ -76,4 +77,6 @@ model Quote {
   title     String
   quote     String
   createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
 }

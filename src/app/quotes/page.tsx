@@ -1,9 +1,29 @@
 import { prisma } from '@/lib/db'
 import Navbar from '@/components/Navbar'
 import Link from 'next/link'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { redirect } from 'next/navigation'
 
 async function getQuotes() {
+  const session = await getServerSession(authOptions)
+  
+  if (!session?.user?.email) {
+    return []
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  })
+
+  if (!user) {
+    return []
+  }
+
   const quotes = await prisma.quote.findMany({
+    where: {
+      userId: user.id
+    },
     orderBy: {
       createdAt: 'desc'
     }
@@ -12,6 +32,12 @@ async function getQuotes() {
 }
 
 export default async function QuotesPage() {
+  const session = await getServerSession(authOptions)
+  
+  if (!session) {
+    redirect('/api/auth/signin')
+  }
+
   const quotes = await getQuotes()
 
   return (
