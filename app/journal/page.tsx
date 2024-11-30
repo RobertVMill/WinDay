@@ -1,13 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 import { useRouter } from 'next/navigation';
 
 export default function JournalPage() {
   const router = useRouter();
-  const [uploading, setUploading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     gratitude: '',
     gifts: '',
@@ -19,238 +17,192 @@ export default function JournalPage() {
     workout_category: '',
     deep_flow_activity: ''
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setImageFile(e.target.files[0]);
     }
   };
 
-  const handleImageUpload = async (file: File): Promise<string> => {
-    const fileName = `${Date.now()}-${file.name}`;
+  const uploadImage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
     const filePath = `${fileName}`;
 
     try {
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError, data } = await supabase.storage
         .from('journal-images')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('journal-images')
         .getPublicUrl(filePath);
 
       return publicUrl;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error("Couldn't upload image:", error.message);
-      }
-      throw new Error("Couldn't upload image");
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
     }
-  };
-
-  const formatText = (text: string) => {
-    return text.replace(/'/g, "&rsquo;");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploading(true);
-    
+
     try {
       let imageUrl = formData.image_url;
-      
+
       if (imageFile) {
-        imageUrl = await handleImageUpload(imageFile);
+        imageUrl = await uploadImage(imageFile);
       }
-      
+
       const { error } = await supabase
         .from('journal_entries')
         .insert([{ ...formData, image_url: imageUrl }]);
-        
+
       if (error) throw error;
-      
-      alert('Entry saved successfully!');
-      // Clear form except date
-      setFormData({
-        gratitude: '',
-        gifts: '',
-        strategy: '',
-        best_day: '',
-        date: new Date().toISOString().split('T')[0],
-        image_url: '',
-        workout_notes: '',
-        workout_category: '',
-        deep_flow_activity: ''
-      });
-      setImageFile(null);
-      if (document.getElementById('image-upload') instanceof HTMLInputElement) {
-        (document.getElementById('image-upload') as HTMLInputElement).value = '';
-      }
-      
-      // Navigate to scorecard
-      router.push('/scorecard');
+
+      router.push('/app/scorecard');
     } catch (error) {
-      console.error('Error saving entry:', error);
-      alert('Error saving entry. Please try again.');
+      console.error('Error:', error);
     } finally {
       setUploading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: formatText(e.target.value)
-    }));
-  };
-
   return (
-    <main className="min-h-screen p-8 max-w-2xl mx-auto">
-      <h1 className="text-4xl font-bold mb-8 text-center">Daily Journal</h1>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <label htmlFor="date" className="block text-sm font-medium">
-            Date
-          </label>
-          <input
-            type="date"
-            id="date"
-            name="date"
-            value={formData.date}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md bg-white/5"
-            required
-          />
-        </div>
-
-        <div className="space-y-4">
+    <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <form onSubmit={handleSubmit} className="space-y-6 bg-gray-800 p-8 rounded-lg shadow">
           <div>
-            <label htmlFor="gratitude" className="block text-sm font-medium">What&apos;s on your mind today?</label>
+            <label className="block text-sm font-medium text-gray-300">
+              Date
+            </label>
+            <input
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300">
+              What are you grateful for today?
+            </label>
             <textarea
-              id="gratitude"
-              name="gratitude"
               value={formData.gratitude}
-              onChange={handleChange}
-              className="mt-1 w-full p-2 border rounded-md bg-white/5"
-              rows={4}
+              onChange={(e) => setFormData({ ...formData, gratitude: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              rows={3}
             />
           </div>
 
           <div>
-            <label htmlFor="gifts" className="block text-sm font-medium">What&apos;s the best thing that happened today?</label>
+            <label className="block text-sm font-medium text-gray-300">
+              What gifts did you give today?
+            </label>
             <textarea
-              id="gifts"
-              name="gifts"
               value={formData.gifts}
-              onChange={handleChange}
-              className="mt-1 w-full p-2 border rounded-md bg-white/5"
-              rows={4}
+              onChange={(e) => setFormData({ ...formData, gifts: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              rows={3}
             />
           </div>
 
           <div>
-            <label htmlFor="strategy" className="block text-sm font-medium">What&apos;s your strategy for tomorrow?</label>
+            <label className="block text-sm font-medium text-gray-300">
+              What's your strategy for tomorrow?
+            </label>
             <textarea
-              id="strategy"
-              name="strategy"
               value={formData.strategy}
-              onChange={handleChange}
-              className="mt-1 w-full p-2 border rounded-md bg-white/5"
-              rows={4}
+              onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              rows={3}
             />
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <label htmlFor="deep_flow_activity" className="block text-sm font-medium">
-            What will be your deep flow activity today?
-          </label>
-          <textarea
-            id="deep_flow_activity"
-            name="deep_flow_activity"
-            value={formData.deep_flow_activity}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md bg-white/5 min-h-[100px]"
-            placeholder="What activity will you dedicate to achieving deep focus and flow state today?"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="best_day" className="block text-sm font-medium">
-            My best day
-          </label>
-          <textarea
-            id="best_day"
-            name="best_day"
-            value={formData.best_day}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md bg-white/5 min-h-[100px]"
-            required
-          />
-        </div>
-
-        <div className="space-y-4">
-          <label className="block text-sm font-medium">Workout</label>
-          <div className="space-y-2">
-            <label htmlFor="workout_category" className="block text-sm font-medium text-gray-500">
-              Category
-            </label>
-            <select
-              id="workout_category"
-              name="workout_category"
-              value={formData.workout_category}
-              onChange={handleChange}
-              className="w-full p-2 border rounded-md bg-white/5"
-            >
-              <option value="">Select a category</option>
-              <option value="upper_body">Upper Body Strength</option>
-              <option value="lower_body">Lower Body Strength</option>
-              <option value="endurance">Endurance</option>
-            </select>
-          </div>
-          
-          <div className="space-y-2">
-            <label htmlFor="workout_notes" className="block text-sm font-medium text-gray-500">
-              How did your workout go?
+          <div>
+            <label className="block text-sm font-medium text-gray-300">
+              What would make today your best day?
             </label>
             <textarea
-              id="workout_notes"
-              name="workout_notes"
-              value={formData.workout_notes}
-              onChange={handleChange}
-              className="w-full p-2 border rounded-md bg-white/5 min-h-[100px]"
-              placeholder="Describe your workout performance, feelings, and achievements..."
+              value={formData.best_day}
+              onChange={(e) => setFormData({ ...formData, best_day: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              rows={3}
             />
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <label htmlFor="image-upload" className="block text-sm font-medium">
-            Upload an Image
-          </label>
-          <input
-            type="file"
-            id="image-upload"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="w-full p-2 border rounded-md bg-white/5"
-          />
-          {imageFile && (
-            <p className="text-sm text-gray-500">Selected: {imageFile.name}</p>
-          )}
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">
+              Upload Image
+            </label>
+            <input
+              type="file"
+              onChange={handleImageChange}
+              className="mt-1 block w-full text-sm text-gray-300
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-indigo-600 file:text-white
+                hover:file:bg-indigo-700"
+            />
+          </div>
 
-        <button
-          type="submit"
-          disabled={uploading}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
-        >
-          {uploading ? 'Saving...' : 'Save and Proceed to Scorecard'}
-        </button>
-      </form>
-    </main>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">
+              Workout Notes
+            </label>
+            <textarea
+              value={formData.workout_notes}
+              onChange={(e) => setFormData({ ...formData, workout_notes: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300">
+              Workout Category
+            </label>
+            <input
+              type="text"
+              value={formData.workout_category}
+              onChange={(e) => setFormData({ ...formData, workout_category: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300">
+              Deep Flow Activity
+            </label>
+            <textarea
+              value={formData.deep_flow_activity}
+              onChange={(e) => setFormData({ ...formData, deep_flow_activity: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={uploading}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            >
+              {uploading ? 'Saving...' : 'Save Entry'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
