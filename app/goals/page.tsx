@@ -566,31 +566,6 @@ export default function GoalsPage() {
       currentDate = new Date(currentDate.setMonth(currentDate.getMonth() + 1));
     }
 
-    const handleWheel = (e: React.WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        const delta = e.deltaY * -0.5;
-        setTimelineZoom(prev => Math.min(Math.max(50, prev + delta), 200));
-      }
-    };
-
-    const handleMouseDown = (e: React.MouseEvent) => {
-      isDragging.current = true;
-      lastDragX.current = e.clientX;
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-      if (isDragging.current) {
-        const delta = e.clientX - lastDragX.current;
-        setTimelinePan(prev => prev + delta);
-        lastDragX.current = e.clientX;
-      }
-    };
-
-    const handleMouseUp = () => {
-      isDragging.current = false;
-    };
-
     return (
       <div className="mb-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow overflow-x-auto">
         <div className="flex items-center justify-between mb-6">
@@ -615,132 +590,167 @@ export default function GoalsPage() {
             </button>
           </div>
         </div>
-        <div className="relative" style={{ minWidth: '800px', height: '250px' }}>
-          {/* Timeline line */}
-          <div className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700" />
-
-          {/* Today marker */}
-          {today >= firstDate && today <= lastDate && (
-            <div 
-              className="absolute top-0 bottom-0" 
-              style={{ 
-                left: `${15 + ((today.getTime() - firstDate.getTime()) / timeRange) * 80}%`,
-                transform: 'translateX(-50%)'
-              }}
-            >
-              <div className="absolute top-6 w-0.5 h-full bg-red-500 opacity-20" />
-              <div className="absolute top-4 -translate-x-1/2">
-                <div className="px-2 py-1 bg-red-500 text-white text-xs font-medium rounded-full">
-                  Today
-                </div>
-              </div>
-              <div className="absolute top-8 -translate-x-1/2">
-                <div className="w-3 h-3 bg-red-500 rounded-full animate-ping" />
-                <div className="w-3 h-3 bg-red-500 rounded-full absolute top-0" />
-              </div>
-            </div>
-          )}
-
-          {/* Month/Year markers */}
-          <div className="absolute bottom-0 left-0 right-0 h-8">
-            {months.map((month, index) => (
-              <div
-                key={month.date.toISOString()}
-                className="absolute transform -translate-x-1/2"
-                style={{ left: `${month.position}%` }}
-              >
-                <div className="h-3 w-px bg-gray-300 dark:bg-gray-600" />
-                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {month.date.toLocaleDateString(undefined, {
-                    month: 'short',
-                    year: month.date.getMonth() === 0 || index === 0 ? 'numeric' : undefined
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Timeline items */}
-          <div className="relative h-full">
-            {positionedItems.map((item, index) => {
-              // Adjust position if items are too close together
-              let adjustedPosition = item.position;
-              const prevItem = positionedItems[index - 1];
-              if (prevItem && (item.position - prevItem.position) < minSpaceBetweenItems) {
-                adjustedPosition = prevItem.position + minSpaceBetweenItems;
+        <div className="overflow-x-auto">
+          <div
+            className="relative cursor-grab active:cursor-grabbing"
+            style={{ 
+              minWidth: '800px', 
+              width: `${timelineZoom}%`,
+              height: '250px',
+              transform: `translateX(${timelinePan}px)`,
+              transition: isDragging.current ? 'none' : 'transform 0.1s ease-out'
+            }}
+            onWheel={(e: React.WheelEvent) => {
+              if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                const delta = e.deltaY * -0.5;
+                setTimelineZoom(prev => Math.min(Math.max(50, prev + delta), 200));
               }
+            }}
+            onMouseDown={(e: React.MouseEvent) => {
+              isDragging.current = true;
+              lastDragX.current = e.clientX;
+            }}
+            onMouseMove={(e: React.MouseEvent) => {
+              if (isDragging.current) {
+                const delta = e.clientX - lastDragX.current;
+                setTimelinePan(prev => prev + delta);
+                lastDragX.current = e.clientX;
+              }
+            }}
+            onMouseUp={() => {
+              isDragging.current = false;
+            }}
+            onMouseLeave={() => {
+              isDragging.current = false;
+            }}
+          >
+            {/* Timeline line */}
+            <div className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700" />
 
-              return (
-                <div 
-                  key={`${item.type}-${item.id}`} 
-                  className="absolute top-0"
-                  style={{ 
-                    left: `${adjustedPosition}%`,
-                    transform: 'translateX(-50%)'
-                  }}
+            {/* Today marker */}
+            {today >= firstDate && today <= lastDate && (
+              <div 
+                className="absolute top-0 bottom-0" 
+                style={{ 
+                  left: `${15 + ((today.getTime() - firstDate.getTime()) / timeRange) * 80}%`,
+                  transform: 'translateX(-50%)'
+                }}
+              >
+                <div className="absolute top-6 w-0.5 h-full bg-red-500 opacity-20" />
+                <div className="absolute top-4 -translate-x-1/2">
+                  <div className="px-2 py-1 bg-red-500 text-white text-xs font-medium rounded-full">
+                    Today
+                  </div>
+                </div>
+                <div className="absolute top-8 -translate-x-1/2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-ping" />
+                  <div className="w-3 h-3 bg-red-500 rounded-full absolute top-0" />
+                </div>
+              </div>
+            )}
+
+            {/* Month/Year markers */}
+            <div className="absolute bottom-0 left-0 right-0 h-8">
+              {months.map((month, index) => (
+                <div
+                  key={month.date.toISOString()}
+                  className="absolute transform -translate-x-1/2"
+                  style={{ left: `${month.position}%` }}
                 >
-                  {/* Dot and Flag */}
-                  <div className="relative">
-                    <div 
-                      className={`w-4 h-4 rounded-full border-2 cursor-pointer
-                        ${item.completed 
-                          ? 'bg-green-500 border-green-600' 
-                          : 'bg-blue-500 border-blue-600'}`}
-                      onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
-                    />
-                    {item.completed && (
-                      <div className="absolute -right-2 -top-2">
-                        <svg 
-                          className="w-4 h-4 text-green-500" 
-                          fill="currentColor" 
-                          viewBox="0 0 20 20"
-                        >
-                          <path 
-                            fillRule="evenodd" 
-                            d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" 
-                            clipRule="evenodd" 
-                          />
-                        </svg>
-                      </div>
-                    )}
+                  <div className="h-3 w-px bg-gray-300 dark:bg-gray-600" />
+                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    {month.date.toLocaleDateString(undefined, {
+                      month: 'short',
+                      year: month.date.getMonth() === 0 || index === 0 ? 'numeric' : undefined
+                    })}
                   </div>
+                </div>
+              ))}
+            </div>
 
-                  {/* Date */}
-                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    {new Date(item.target_date!).toLocaleDateString()}
-                  </div>
+            {/* Timeline items */}
+            <div className="relative h-full">
+              {positionedItems.map((item, index) => {
+                // Adjust position if items are too close together
+                let adjustedPosition = item.position;
+                const prevItem = positionedItems[index - 1];
+                if (prevItem && (item.position - prevItem.position) < minSpaceBetweenItems) {
+                  adjustedPosition = prevItem.position + minSpaceBetweenItems;
+                }
 
-                  {/* Type indicator */}
-                  <div className={`text-xs font-medium mt-1 whitespace-nowrap
-                    ${item.type === 'vision' ? 'text-purple-600 dark:text-purple-400' :
-                      item.type === 'bhag' ? 'text-blue-600 dark:text-blue-400' :
-                      'text-indigo-600 dark:text-indigo-400'}`}
-                  >
-                    {item.type.toUpperCase()}
-                  </div>
-
-                  {/* Expandable content */}
+                return (
                   <div 
-                    className={`absolute top-16 -translate-x-1/2 w-48 transition-all duration-200 ease-in-out z-10
-                      ${expandedItem === item.id 
-                        ? 'opacity-100 translate-y-0 pointer-events-auto' 
-                        : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+                    key={`${item.type}-${item.id}`} 
+                    className="absolute top-0"
+                    style={{ 
+                      left: `${adjustedPosition}%`,
+                      transform: 'translateX(-50%)'
+                    }}
                   >
-                    <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg border shadow-lg
-                      border-blue-200 dark:border-blue-800">
-                      <p className="text-sm text-gray-900 dark:text-gray-100 break-words">
-                        {item.content}
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        {item.completed 
-                          ? `Completed on ${new Date().toLocaleDateString()}`
-                          : `Target: ${new Date(item.target_date!).toLocaleDateString()}`}
-                      </p>
+                    {/* Dot and Flag */}
+                    <div className="relative">
+                      <div 
+                        className={`w-4 h-4 rounded-full border-2 cursor-pointer
+                          ${item.completed 
+                            ? 'bg-green-500 border-green-600' 
+                            : 'bg-blue-500 border-blue-600'}`}
+                        onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
+                      />
+                      {item.completed && (
+                        <div className="absolute -right-2 -top-2">
+                          <svg 
+                            className="w-4 h-4 text-green-500" 
+                            fill="currentColor" 
+                            viewBox="0 0 20 20"
+                          >
+                            <path 
+                              fillRule="evenodd" 
+                              d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" 
+                              clipRule="evenodd" 
+                            />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Date */}
+                    <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                      {new Date(item.target_date!).toLocaleDateString()}
+                    </div>
+
+                    {/* Type indicator */}
+                    <div className={`text-xs font-medium mt-1 whitespace-nowrap
+                      ${item.type === 'vision' ? 'text-purple-600 dark:text-purple-400' :
+                        item.type === 'bhag' ? 'text-blue-600 dark:text-blue-400' :
+                        'text-indigo-600 dark:text-indigo-400'}`}
+                    >
+                      {item.type.toUpperCase()}
+                    </div>
+
+                    {/* Expandable content */}
+                    <div 
+                      className={`absolute top-16 -translate-x-1/2 w-48 transition-all duration-200 ease-in-out z-10
+                        ${expandedItem === item.id 
+                          ? 'opacity-100 translate-y-0 pointer-events-auto' 
+                          : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+                    >
+                      <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg border shadow-lg
+                        border-blue-200 dark:border-blue-800">
+                        <p className="text-sm text-gray-900 dark:text-gray-100 break-words">
+                          {item.content}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          {item.completed 
+                            ? `Completed on ${new Date().toLocaleDateString()}`
+                            : `Target: ${new Date(item.target_date!).toLocaleDateString()}`}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

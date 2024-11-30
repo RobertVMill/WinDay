@@ -62,7 +62,7 @@ export default function JournalPage() {
         imageUrl = await uploadImage(imageFile);
       }
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('journal_entries')
         .insert([{ ...formData, image_url: imageUrl }]);
         
@@ -70,7 +70,7 @@ export default function JournalPage() {
       
       alert('Entry saved successfully!');
       // Clear form except date
-      setFormData(prev => ({
+      setFormData({
         gratitude: '',
         gifts: '',
         strategy: '',
@@ -80,7 +80,7 @@ export default function JournalPage() {
         workout_notes: '',
         workout_category: '',
         deep_flow_activity: ''
-      }));
+      });
       setImageFile(null);
       if (document.getElementById('image-upload') instanceof HTMLInputElement) {
         (document.getElementById('image-upload') as HTMLInputElement).value = '';
