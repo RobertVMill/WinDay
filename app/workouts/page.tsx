@@ -24,7 +24,7 @@ export default function WorkoutsPage() {
 
   useEffect(() => {
     fetchLatestWorkouts();
-  }, []);
+  }, [fetchLatestWorkouts]);
 
   const fetchLatestWorkouts = async () => {
     try {

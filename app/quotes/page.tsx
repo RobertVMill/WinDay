@@ -49,7 +49,7 @@ export default function Quotes() {
     setSaving(true);
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('quotes')
         .insert([newQuote]);
 
@@ -58,9 +58,12 @@ export default function Quotes() {
       setNewQuote({ title: '', quote: '' });
       fetchQuotes(); // Refresh the quotes list
       setShowAddForm(false);
-    } catch (error) {
-      console.error('Error saving quote:', error);
-      alert('Error saving quote. Please try again.');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Error saving quote:', error.message);
+      } else {
+        console.error('An unknown error occurred while saving quote');
+      }
     } finally {
       setSaving(false);
     }
