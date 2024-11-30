@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -83,6 +83,10 @@ export default function GoalsPage() {
     notes: ''
   });
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
+  const [timelineZoom, setTimelineZoom] = useState(100); // percentage
+  const [timelinePan, setTimelinePan] = useState(0); // pixels
+  const isDragging = useRef(false);
+  const lastDragX = useRef(0);
 
   useEffect(() => {
     fetchAllData();
@@ -543,9 +547,8 @@ export default function GoalsPage() {
     if (items.length === 0) return null;
 
     const positionedItems = calculateTimelinePositions(items);
-    const minSpaceBetweenItems = 10; // Minimum space between items in percentage
+    const minSpaceBetweenItems = 10;
 
-    // Add today marker
     const today = new Date();
     const firstDate = new Date(items[0].target_date!);
     const lastDate = new Date(items[items.length - 1].target_date!);
@@ -563,9 +566,55 @@ export default function GoalsPage() {
       currentDate = new Date(currentDate.setMonth(currentDate.getMonth() + 1));
     }
 
+    const handleWheel = (e: React.WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = e.deltaY * -0.5;
+        setTimelineZoom(prev => Math.min(Math.max(50, prev + delta), 200));
+      }
+    };
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+      isDragging.current = true;
+      lastDragX.current = e.clientX;
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+      if (isDragging.current) {
+        const delta = e.clientX - lastDragX.current;
+        setTimelinePan(prev => prev + delta);
+        lastDragX.current = e.clientX;
+      }
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+    };
+
     return (
       <div className="mb-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow overflow-x-auto">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Timeline</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Timeline</h2>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setTimelineZoom(prev => Math.max(50, prev - 10))}
+              className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+              </svg>
+            </button>
+            <span className="text-sm text-gray-600 dark:text-gray-400">{timelineZoom}%</span>
+            <button
+              onClick={() => setTimelineZoom(prev => Math.min(200, prev + 10))}
+              className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
+        </div>
         <div className="relative" style={{ minWidth: '800px', height: '250px' }}>
           {/* Timeline line */}
           <div className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700" />
