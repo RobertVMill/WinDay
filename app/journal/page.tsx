@@ -1,7 +1,8 @@
 'use client';
 
+
 import { useState } from 'react';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 
 export default function JournalPage() {
@@ -32,7 +33,7 @@ export default function JournalPage() {
     const filePath = `${fileName}`;
 
     try {
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('journal-images')
         .upload(filePath, file);
 
@@ -54,23 +55,43 @@ export default function JournalPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploading(true);
-
+    
     try {
       let imageUrl = formData.image_url;
-
+      
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
       }
-
+      
       const { error } = await supabase
         .from('journal_entries')
         .insert([{ ...formData, image_url: imageUrl }]);
-
+        
       if (error) throw error;
-
-      router.push('/app/scorecard');
+      
+      alert('Entry saved successfully!');
+      // Clear form except date
+      setFormData({
+        gratitude: '',
+        gifts: '',
+        strategy: '',
+        best_day: '',
+        date: new Date().toISOString().split('T')[0],
+        image_url: '',
+        workout_notes: '',
+        workout_category: '',
+        deep_flow_activity: ''
+      });
+      setImageFile(null);
+      if (document.getElementById('image-upload') instanceof HTMLInputElement) {
+        (document.getElementById('image-upload') as HTMLInputElement).value = '';
+      }
+      
+      // Navigate to scorecard
+      router.push('/scorecard');
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error saving entry:', error);
+      alert('Error saving entry. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -118,7 +139,7 @@ export default function JournalPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-300">
-              What's your strategy for tomorrow?
+              What&apos;s your strategy for tomorrow?
             </label>
             <textarea
               value={formData.strategy}

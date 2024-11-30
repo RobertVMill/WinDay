@@ -43,6 +43,7 @@ interface TimelineItem {
   target_date: string;
   completed?: boolean;
   type: 'vision' | 'bhag' | 'milestone';
+  position: number;
 }
 
 export default function GoalsPage() {
@@ -620,8 +621,9 @@ export default function GoalsPage() {
       items.push({
         id: vision.id,
         content: vision.content,
-        target_date: vision.target_date,
-        type: 'vision'
+        target_date: vision.target_date || '',
+        type: 'vision',
+        position: 0, // Default position value
       });
     }
 
@@ -629,9 +631,10 @@ export default function GoalsPage() {
       items.push({
         id: bhag.id,
         content: bhag.content,
-        target_date: bhag.target_date,
+        target_date: bhag.target_date || '',
         completed: bhag.completed,
-        type: 'bhag'
+        type: 'bhag',
+        position: 0, // Default position value
       });
     });
 
@@ -639,9 +642,10 @@ export default function GoalsPage() {
       items.push({
         id: milestone.id,
         content: milestone.content,
-        target_date: milestone.target_date,
+        target_date: milestone.target_date || '',
         completed: milestone.completed,
-        type: 'milestone'
+        type: 'milestone',
+        position: 0, // Default position value
       });
     });
 
