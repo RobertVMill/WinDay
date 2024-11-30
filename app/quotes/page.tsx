@@ -112,7 +112,7 @@ export default function Quotes() {
             placeholder="Search quotes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full p-2 border rounded-md"
+            className="w-full p-2 border rounded-md bg-white/5 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
           />
         </div>
         <p className="text-sm text-gray-600">

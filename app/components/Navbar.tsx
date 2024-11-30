@@ -1,10 +1,20 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleSignOut = () => {
+    // Clear authentication
+    localStorage.removeItem('isAuthenticated');
+    document.cookie = 'isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+    // Redirect to sign-in page
+    router.push('/auth/signin');
+  };
 
   const navigation = [
     { name: 'Goals', href: '/goals' },
@@ -26,20 +36,30 @@ export default function Navbar() {
               </Link>
             </div>
             <div className="hidden md:block">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    pathname === item.href
-                      ? 'border-blue-500 text-gray-900 dark:text-white'
-                      : 'border-transparent text-gray-500 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700'
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
+              <div className="ml-10 flex items-baseline space-x-4">
+                {navigation.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`${
+                      pathname === item.href
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                    } rounded-md px-3 py-2 text-sm font-medium`}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
             </div>
+          </div>
+          <div>
+            <button
+              onClick={handleSignOut}
+              className="text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </div>
