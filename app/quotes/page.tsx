@@ -24,20 +24,19 @@ export default function Quotes() {
     fetchQuotes();
   }, []);
 
-  const fetchQuotes = async () => {
+  async function fetchQuotes() {
     try {
-      const { data, error } = await supabase
+      const { data: quotesData, error } = await supabase
         .from('quotes')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setQuotes(data || []);
-      
-      // Set a random quote
-      if (data && data.length > 0) {
-        const randomIndex = Math.floor(Math.random() * data.length);
-        setRandomQuote(data[randomIndex]);
+      if (error) {
+        throw error;
+      }
+
+      if (quotesData) {
+        setQuotes(quotesData);
       }
     } catch (error) {
       console.error('Error fetching quotes:', error);
@@ -87,7 +86,9 @@ export default function Quotes() {
       {/* Random Quote Section */}
       {randomQuote && (
         <div className="mb-8 p-6 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg shadow-lg">
-          <p className="text-lg font-medium italic mb-4">"{randomQuote.quote}"</p>
+          <blockquote className="text-lg font-medium italic mb-4">
+            &ldquo;{randomQuote.quote}&rdquo;
+          </blockquote>
           {randomQuote.title && <p className="text-sm">- {randomQuote.title}</p>}
           <button
             onClick={getNewRandomQuote}
@@ -173,9 +174,9 @@ export default function Quotes() {
           <div className="grid gap-4">
             {filteredQuotes.map((quote) => (
               <div key={quote.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow">
-                <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
-                  "{quote.quote}"
-                </p>
+                <blockquote className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
+                  &ldquo;{quote.quote}&rdquo;
+                </blockquote>
                 {quote.title && (
                   <p className="text-sm text-gray-500 mt-2">
                     - {quote.title}
