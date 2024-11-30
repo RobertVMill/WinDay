@@ -549,32 +549,67 @@ export default function GoalsPage() {
     const today = new Date();
     const firstDate = new Date(items[0].target_date!);
     const lastDate = new Date(items[items.length - 1].target_date!);
-    const showToday = today >= firstDate && today <= lastDate;
+    const timeRange = lastDate.getTime() - firstDate.getTime();
+
+    // Generate month/year markers
+    const months: { date: Date; position: number }[] = [];
+    let currentDate = new Date(firstDate);
+    while (currentDate <= lastDate) {
+      const position = 15 + ((currentDate.getTime() - firstDate.getTime()) / timeRange) * 80;
+      months.push({
+        date: new Date(currentDate),
+        position
+      });
+      currentDate = new Date(currentDate.setMonth(currentDate.getMonth() + 1));
+    }
 
     return (
       <div className="mb-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow overflow-x-auto">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Timeline</h2>
-        <div className="relative" style={{ minWidth: '800px', height: '200px' }}>
+        <div className="relative" style={{ minWidth: '800px', height: '250px' }}>
           {/* Timeline line */}
           <div className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700" />
 
           {/* Today marker */}
-          {showToday && (
+          {today >= firstDate && today <= lastDate && (
             <div 
               className="absolute top-0 bottom-0" 
               style={{ 
-                left: `${15 + ((today.getTime() - new Date(items[0].target_date!).getTime()) / 
-                  (new Date(items[items.length - 1].target_date!).getTime() - 
-                   new Date(items[0].target_date!).getTime())) * 80}%`,
+                left: `${15 + ((today.getTime() - firstDate.getTime()) / timeRange) * 80}%`,
                 transform: 'translateX(-50%)'
               }}
             >
-              <div className="absolute top-6 w-0.5 h-4 bg-red-500" />
-              <div className="absolute top-4 -translate-x-1/2 whitespace-nowrap">
-                <span className="text-xs font-medium text-red-500">Today</span>
+              <div className="absolute top-6 w-0.5 h-full bg-red-500 opacity-20" />
+              <div className="absolute top-4 -translate-x-1/2">
+                <div className="px-2 py-1 bg-red-500 text-white text-xs font-medium rounded-full">
+                  Today
+                </div>
+              </div>
+              <div className="absolute top-8 -translate-x-1/2">
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-ping" />
+                <div className="w-3 h-3 bg-red-500 rounded-full absolute top-0" />
               </div>
             </div>
           )}
+
+          {/* Month/Year markers */}
+          <div className="absolute bottom-0 left-0 right-0 h-8">
+            {months.map((month, index) => (
+              <div
+                key={month.date.toISOString()}
+                className="absolute transform -translate-x-1/2"
+                style={{ left: `${month.position}%` }}
+              >
+                <div className="h-3 w-px bg-gray-300 dark:bg-gray-600" />
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                  {month.date.toLocaleDateString(undefined, {
+                    month: 'short',
+                    year: month.date.getMonth() === 0 || index === 0 ? 'numeric' : undefined
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
 
           {/* Timeline items */}
           <div className="relative h-full">
