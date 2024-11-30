@@ -5,6 +5,28 @@ import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
+const DEFAULT_STRATEGY = `Trust the process. Love the work. Burn the ships. Build consistent momentum.
+
+🧍🏽‍♂️ BODY POWERFUL
+- WC Workouts
+- Fast til noon
+- Fiber and protein
+- Huge sleeps
+
+🧠 MIND SHARP
+- Find dopamine during work
+- Make your clients euphoric
+- Listen your ass off
+
+🦠 GUT FLOURISHING
+- Fiber and protein
+- Low sugar & sodium
+- Eat moderately
+
+❤️ Heart
+- Meditate on love
+- Give 10X every time`;
+
 interface JournalEntry {
   id: number;
   date: string;
@@ -192,14 +214,9 @@ function EntryDetail({ entry, onClose }: { entry: JournalEntry; onClose: () => v
             <p className="text-gray-300">{entry.strategy}</p>
           </div>
           
-          <div>
-            <h3 className="text-lg font-semibold text-white">Best Day Vision</h3>
-            <p className="text-gray-300">{entry.best_day}</p>
-          </div>
-          
           {entry.workout_notes && (
             <div>
-              <h3 className="text-lg font-semibold text-white">Workout Notes</h3>
+              <h3 className="text-lg font-semibold text-white">Workout Notes from Yesterday</h3>
               <p className="text-gray-300">{entry.workout_notes}</p>
             </div>
           )}
@@ -228,7 +245,7 @@ export default function JournalPage() {
   const [formData, setFormData] = useState({
     gratitude: '',
     gifts: '',
-    strategy: '',
+    strategy: DEFAULT_STRATEGY,
     best_day: '',
     date: new Date().toISOString().split('T')[0],
     image_url: '',
@@ -297,7 +314,7 @@ export default function JournalPage() {
       setFormData({
         gratitude: '',
         gifts: '',
-        strategy: '',
+        strategy: DEFAULT_STRATEGY,
         best_day: '',
         date: new Date().toISOString().split('T')[0],
         image_url: '',
@@ -362,59 +379,54 @@ export default function JournalPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-300">
-              What gifts did you give today?
+              What are your gifts to share with the world?
             </label>
             <textarea
               value={formData.gifts}
               onChange={(e) => setFormData({ ...formData, gifts: e.target.value })}
               className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               rows={3}
+              placeholder="What unique talents, insights, or contributions can you offer to make the world better?"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300">
-              What&apos;s your strategy for tomorrow?
+              What is my strategy today?
             </label>
             <textarea
               value={formData.strategy}
               onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              rows={3}
+              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-mono"
+              rows={15}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">
-              What would make today your best day?
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Workout Category
             </label>
-            <textarea
-              value={formData.best_day}
-              onChange={(e) => setFormData({ ...formData, best_day: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              rows={3}
-            />
+            <div className="flex flex-wrap gap-2">
+              {['Upper Strength', 'Lower Strength', 'Endurance'].map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, workout_category: category })}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+                    formData.workout_category === category
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300">
-              Upload Image
-            </label>
-            <input
-              type="file"
-              onChange={handleImageChange}
-              className="mt-1 block w-full text-sm text-gray-300
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-full file:border-0
-                file:text-sm file:font-semibold
-                file:bg-indigo-600 file:text-white
-                hover:file:bg-indigo-700"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Workout Notes
+              Workout Notes from Yesterday
             </label>
             <textarea
               value={formData.workout_notes}
@@ -426,25 +438,31 @@ export default function JournalPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-300">
-              Workout Category
-            </label>
-            <input
-              type="text"
-              value={formData.workout_category}
-              onChange={(e) => setFormData({ ...formData, workout_category: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Deep Flow Activity
+              What is my Deep Flow Activity today?
             </label>
             <textarea
               value={formData.deep_flow_activity}
               onChange={(e) => setFormData({ ...formData, deep_flow_activity: e.target.value })}
               className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               rows={3}
+              placeholder="What activity will put you in a state of deep focus and flow?"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300">
+              Upload Image
+            </label>
+            <input
+              id="image-upload"
+              type="file"
+              onChange={handleImageChange}
+              className="mt-1 block w-full text-sm text-gray-300
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-indigo-600 file:text-white
+                hover:file:bg-indigo-700"
             />
           </div>
 
