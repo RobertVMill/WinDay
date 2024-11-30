@@ -23,37 +23,37 @@ export default function WorkoutsPage() {
   ]);
 
   useEffect(() => {
+    const fetchLatestWorkouts = async () => {
+      try {
+        const summaries = await Promise.all(
+          workoutSummaries.map(async (summary) => {
+            const { data, error } = await supabase
+              .from('journal_entries')
+              .select('workout_notes, workout_category, date')
+              .eq('workout_category', summary.category)
+              .order('date', { ascending: false })
+              .limit(1)
+              .single();
+
+            if (error && error.code !== 'PGRST116') {
+              console.error(`Error fetching ${summary.category}:`, error);
+            }
+
+            return {
+              ...summary,
+              latestEntry: data as WorkoutEntry
+            };
+          })
+        );
+
+        setWorkoutSummaries(summaries);
+      } catch (error) {
+        console.error('Error fetching workout summaries:', error);
+      }
+    };
+
     fetchLatestWorkouts();
-  }, [fetchLatestWorkouts]);
-
-  const fetchLatestWorkouts = async () => {
-    try {
-      const summaries = await Promise.all(
-        workoutSummaries.map(async (summary) => {
-          const { data, error } = await supabase
-            .from('journal_entries')
-            .select('workout_notes, workout_category, date')
-            .eq('workout_category', summary.category)
-            .order('date', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (error && error.code !== 'PGRST116') {
-            console.error(`Error fetching ${summary.category}:`, error);
-          }
-
-          return {
-            ...summary,
-            latestEntry: data as WorkoutEntry
-          };
-        })
-      );
-
-      setWorkoutSummaries(summaries);
-    } catch (error) {
-      console.error('Error fetching workout summaries:', error);
-    }
-  };
+  }, [workoutSummaries]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {

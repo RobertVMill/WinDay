@@ -133,9 +133,13 @@ export default function GoalsPage() {
           setMilestones(milestonesData || []);
         }
       }
-    } catch (err: any) {
-      console.error('Error fetching data:', err);
-      setError(err?.message || 'Failed to load vision data. Please try again later.');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Error fetching data:', error.message);
+      } else {
+        console.error('An unknown error occurred while fetching data');
+      }
+      setError('Failed to load data');
     } finally {
       setLoading(false);
     }

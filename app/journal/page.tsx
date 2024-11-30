@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 
 export default function JournalPage() {
   const router = useRouter();
+  const [uploading, setUploading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     gratitude: '',
     gifts: '',
@@ -17,10 +19,8 @@ export default function JournalPage() {
     workout_category: '',
     deep_flow_activity: ''
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setImageFile(e.target.files[0]);
     }
@@ -126,46 +126,42 @@ export default function JournalPage() {
           />
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="gratitude" className="block text-sm font-medium">
-            What I'm grateful for
-          </label>
-          <textarea
-            id="gratitude"
-            name="gratitude"
-            value={formData.gratitude}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md bg-white/5 min-h-[100px]"
-            required
-          />
-        </div>
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="gratitude" className="block text-sm font-medium">What&apos;s on your mind today?</label>
+            <textarea
+              id="gratitude"
+              name="gratitude"
+              value={formData.gratitude}
+              onChange={handleChange}
+              className="mt-1 w-full p-2 border rounded-md bg-white/5"
+              rows={4}
+            />
+          </div>
 
-        <div className="space-y-2">
-          <label htmlFor="gifts" className="block text-sm font-medium">
-            My gifts
-          </label>
-          <textarea
-            id="gifts"
-            name="gifts"
-            value={formData.gifts}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md bg-white/5 min-h-[100px]"
-            required
-          />
-        </div>
+          <div>
+            <label htmlFor="gifts" className="block text-sm font-medium">What&apos;s the best thing that happened today?</label>
+            <textarea
+              id="gifts"
+              name="gifts"
+              value={formData.gifts}
+              onChange={handleChange}
+              className="mt-1 w-full p-2 border rounded-md bg-white/5"
+              rows={4}
+            />
+          </div>
 
-        <div className="space-y-2">
-          <label htmlFor="strategy" className="block text-sm font-medium">
-            My strategy
-          </label>
-          <textarea
-            id="strategy"
-            name="strategy"
-            value={formData.strategy}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md bg-white/5 min-h-[100px]"
-            required
-          />
+          <div>
+            <label htmlFor="strategy" className="block text-sm font-medium">What&apos;s your strategy for tomorrow?</label>
+            <textarea
+              id="strategy"
+              name="strategy"
+              value={formData.strategy}
+              onChange={handleChange}
+              className="mt-1 w-full p-2 border rounded-md bg-white/5"
+              rows={4}
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -239,7 +235,7 @@ export default function JournalPage() {
             type="file"
             id="image-upload"
             accept="image/*"
-            onChange={handleImageChange}
+            onChange={handleFileChange}
             className="w-full p-2 border rounded-md bg-white/5"
           />
           {imageFile && (
