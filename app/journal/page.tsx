@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 
@@ -32,7 +32,7 @@ export default function JournalPage() {
     const filePath = `${fileName}`;
 
     try {
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('journal-images')
         .upload(filePath, file);
 

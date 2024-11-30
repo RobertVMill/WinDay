@@ -24,22 +24,21 @@ export default function Quotes() {
     fetchQuotes();
   }, []);
 
-  async function fetchQuotes() {
+  const fetchQuotes = async () => {
     try {
-      const { data: quotesData, error } = await supabase
+      const { error, data: quotes } = await supabase
         .from('quotes')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        throw error;
+      if (error) throw error;
+      if (quotes) setQuotes(quotes);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Error fetching quotes:', error.message);
+      } else {
+        console.error('An unknown error occurred while fetching quotes');
       }
-
-      if (quotesData) {
-        setQuotes(quotesData);
-      }
-    } catch (error) {
-      console.error('Error fetching quotes:', error);
     } finally {
       setLoading(false);
     }

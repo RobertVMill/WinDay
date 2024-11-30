@@ -170,169 +170,121 @@ export default function GoalsPage() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleVisionSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      if (formType === 'vision') {
-        const { data, error } = await supabase
-          .from('north_star_vision')
-          .insert([{
-            content: newVision.content,
-            target_date: newVision.target_date || null,
-            notes: newVision.notes || null,
-            is_active: true
-          }])
-          .select()
-          .single();
+      const { error } = await supabase
+        .from('north_star_vision')
+        .insert([newVision]);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        setVision(data);
-        setShowAddForm(false);
-        setNewVision({ content: '', target_date: '', notes: '' });
-      } else if (formType === 'bhag' && vision) {
-        console.log('Creating BHAG with data:', {
-          vision_id: vision.id,
-          content: newBhag.content,
-          target_date: newBhag.target_date || null,
-          notes: newBhag.notes || null,
-          completed: false
-        });
-        
-        const { data, error } = await supabase
-          .from('bhags')
-          .insert([{
-            vision_id: vision.id,
-            content: newBhag.content,
-            target_date: newBhag.target_date || null,
-            notes: newBhag.notes || null,
-            completed: false
-          }])
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error creating BHAG:', error);
-          throw error;
-        }
-
-        console.log('Successfully created BHAG:', data);
-        setBhags([...bhags, data]);
-        setShowAddForm(false);
-        setNewBhag({ content: '', target_date: '', notes: '' });
+      fetchAllData();
+      setShowAddForm(false);
+      setNewVision({
+        content: '',
+        target_date: '',
+        notes: ''
+      });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An error occurred while saving the vision');
       }
-    } catch (err: any) {
-      console.error('Error adding item:', err);
-      setError(err?.message || 'Failed to save. Please try again.');
+    }
+  }
+
+  async function handleBhagSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!vision) return;
+
+    try {
+      const { error } = await supabase
+        .from('bhags')
+        .insert([{ ...newBhag, vision_id: vision.id }]);
+
+      if (error) throw error;
+
+      fetchAllData();
+      setShowAddForm(false);
+      setNewBhag({
+        content: '',
+        target_date: '',
+        notes: ''
+      });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An error occurred while saving the BHAG');
+      }
     }
   }
 
   async function handleMilestoneSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!selectedBhagId) return;
+
     try {
-      if (!selectedBhagId) return;
-
-      console.log('Creating milestone with data:', {
-        bhag_id: selectedBhagId,
-        content: newMilestone.content,
-        target_date: newMilestone.target_date || null,
-        notes: newMilestone.notes || null,
-        completed: false
-      });
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('milestones')
-        .insert([{
-          bhag_id: selectedBhagId,
-          content: newMilestone.content,
-          target_date: newMilestone.target_date || null,
-          notes: newMilestone.notes || null,
-          completed: false
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating milestone:', error);
-        throw error;
-      }
-
-      console.log('Successfully created milestone:', data);
-      setMilestones([...milestones, data]);
-      setShowMilestoneForm(false);
-      setSelectedBhagId(null);
-      setNewMilestone({ content: '', target_date: '', notes: '' });
-    } catch (err: any) {
-      console.error('Error adding milestone:', err);
-      setError(err?.message || 'Failed to save milestone. Please try again.');
-    }
-  }
-
-  async function deleteBhag(bhagId: number) {
-    try {
-      console.log('Deleting BHAG:', bhagId);
-      const { error } = await supabase
-        .from('bhags')
-        .delete()
-        .eq('id', bhagId);
-
-      if (error) {
-        console.error('Error deleting BHAG:', error);
-        throw error;
-      }
-
-      console.log('Successfully deleted BHAG');
-      setBhags(bhags.filter(bhag => bhag.id !== bhagId));
-    } catch (err: any) {
-      console.error('Error deleting BHAG:', err);
-      setError(err?.message || 'Failed to delete BHAG. Please try again.');
-    }
-  }
-
-  async function toggleBhagComplete(bhagId: number, completed: boolean) {
-    try {
-      const { error } = await supabase
-        .from('bhags')
-        .update({ completed })
-        .eq('id', bhagId);
+        .insert([{ ...newMilestone, bhag_id: selectedBhagId }]);
 
       if (error) throw error;
 
-      setBhags(bhags.map(bhag => 
-        bhag.id === bhagId ? { ...bhag, completed } : bhag
-      ));
-    } catch (err: any) {
-      console.error('Error updating BHAG:', err);
-      setError(err?.message || 'Failed to update BHAG. Please try again.');
+      fetchAllData();
+      setShowMilestoneForm(false);
+      setSelectedBhagId(null);
+      setNewMilestone({
+        content: '',
+        target_date: '',
+        notes: ''
+      });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An error occurred while saving the milestone');
+      }
+    }
+  }
+
+  async function deleteBhag(id: number) {
+    try {
+      const { error } = await supabase
+        .from('bhags')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      fetchAllData();
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An error occurred while deleting the BHAG');
+      }
     }
   }
 
   async function toggleMilestoneComplete(milestone: Milestone, completed: boolean) {
     try {
-      // Update local state immediately for responsive UI
-      setMilestones(milestones.map(m =>
-        m.id === milestone.id ? { ...m, completed } : m
-      ));
-
-      // Then update the database
       const { error } = await supabase
         .from('milestones')
         .update({ completed })
         .eq('id', milestone.id);
 
-      if (error) {
-        // If there's an error, revert the local state
-        console.error('Error updating milestone:', error);
-        setMilestones(milestones.map(m =>
-          m.id === milestone.id ? { ...m, completed: !completed } : m
-        ));
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('Successfully updated milestone completion:', { id: milestone.id, completed });
-    } catch (err: any) {
-      console.error('Error updating milestone:', err);
-      setError(err?.message || 'Failed to update milestone. Please try again.');
+      fetchAllData();
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An error occurred while updating the milestone');
+      }
     }
   }
 
@@ -340,6 +292,7 @@ export default function GoalsPage() {
     const isVisionForm = formType === 'vision';
     const formData = isVisionForm ? newVision : newBhag;
     const setFormData = isVisionForm ? setNewVision : setNewBhag;
+    const handleSubmit = isVisionForm ? handleVisionSubmit : handleBhagSubmit;
 
     return (
       <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">

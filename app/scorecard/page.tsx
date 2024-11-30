@@ -69,7 +69,7 @@ export default function ScoreCard() {
     setSaving(true);
     
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('daily_scores')
         .insert([{ ...formData, total_score: totalScore }]);
         
