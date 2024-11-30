@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Space_Grotesk } from 'next/font/google';
 import "./globals.css";
 import Navbar from "./components/Navbar";
 
@@ -15,6 +16,11 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-space-grotesk',
+});
+
 export const metadata: Metadata = {
   title: "WinDay",
   description: "Your personal development companion",
@@ -26,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="en" className={`${spaceGrotesk.variable}`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900`}>
         <Navbar />
         {children}
       </body>

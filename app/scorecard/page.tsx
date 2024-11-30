@@ -2,6 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 interface ScoreData {
   date: string;
@@ -14,6 +26,58 @@ interface ScoreData {
   no_rap: boolean;
   nidra: boolean;
 }
+
+const calculateTotalScore = (score: ScoreData) => {
+  let total = 0;
+  
+  // Sleep performance (0-20 points based on percentage)
+  total += Math.round((score.sleep_performance / 100) * 20);
+  
+  // Boolean checks (10 points each)
+  if (score.fast_until_noon) total += 10;
+  if (score.no_p) total += 10;
+  if (score.no_youtube) total += 10;
+  if (score.no_rap) total += 10;
+  if (score.nidra) total += 10;
+  
+  // Reading minutes (1 point per 10 minutes, max 15 points)
+  total += Math.min(Math.floor(score.minutes_read / 10), 15);
+  
+  // GitHub commits (2 points per commit, max 15 points)
+  total += Math.min(score.github_commits * 2, 15);
+  
+  return total;
+};
+
+const ScoreChart = ({ scores }: { scores: ScoreData[] }) => {
+  const data = {
+    labels: scores.map(score => score.date),
+    datasets: [
+      {
+        label: 'Total Score',
+        data: scores.map(score => calculateTotalScore(score)),
+        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        fill: true,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: 'Score History',
+      },
+    },
+  };
+
+  return <Line data={data} options={options} />;
+};
 
 export default function ScoreCard() {
   const [formData, setFormData] = useState<ScoreData>({
@@ -30,6 +94,7 @@ export default function ScoreCard() {
 
   const [totalScore, setTotalScore] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [previousScores, setPreviousScores] = useState<ScoreData[]>([]);
 
   // Calculate total score whenever form data changes
   useEffect(() => {
@@ -53,6 +118,24 @@ export default function ScoreCard() {
     
     setTotalScore(score);
   }, [formData]);
+
+  useEffect(() => {
+    const fetchPreviousScores = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('daily_scores')
+          .select('*')
+          .order('date', { ascending: false });
+
+        if (error) throw error;
+        if (data) setPreviousScores(data);
+      } catch (error) {
+        console.error('Error fetching previous scores:', error);
+      }
+    };
+
+    fetchPreviousScores();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -85,166 +168,171 @@ export default function ScoreCard() {
   };
 
   return (
-    <main className="min-h-screen p-8 max-w-2xl mx-auto">
-      <h1 className="text-4xl font-bold mb-8 text-center">Daily Score Card</h1>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <label htmlFor="date" className="block text-sm font-medium">
-            Date
-          </label>
-          <input
-            type="date"
-            id="date"
-            name="date"
-            value={formData.date}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md bg-white/5"
-            required
-          />
-        </div>
+    <div>
+      <ScoreChart scores={previousScores} />
 
-        <div className="space-y-2">
-          <label htmlFor="sleep_performance" className="block text-sm font-medium">
-            Sleep Performance (0-100%)
-          </label>
-          <input
-            type="number"
-            id="sleep_performance"
-            name="sleep_performance"
-            min="0"
-            max="100"
-            value={formData.sleep_performance}
-            onChange={handleChange}
-            className="w-full p-2 border rounded-md bg-white/5"
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
+      <h1>Today&apos;s Scorecard</h1>
+      <main className="min-h-screen p-8 max-w-2xl mx-auto">
+        <h1 className="text-4xl font-bold mb-8 text-center">Daily Score Card</h1>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label htmlFor="minutes_read" className="block text-sm font-medium">
-              Minutes Read
+            <label htmlFor="date" className="block text-sm font-medium">
+              Date
             </label>
             <input
-              type="number"
-              id="minutes_read"
-              name="minutes_read"
-              min="0"
-              value={formData.minutes_read}
+              type="date"
+              id="date"
+              name="date"
+              value={formData.date}
               onChange={handleChange}
               className="w-full p-2 border rounded-md bg-white/5"
+              required
             />
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="github_commits" className="block text-sm font-medium">
-              GitHub Commits
+            <label htmlFor="sleep_performance" className="block text-sm font-medium">
+              Sleep Performance (0-100%)
             </label>
             <input
               type="number"
-              id="github_commits"
-              name="github_commits"
+              id="sleep_performance"
+              name="sleep_performance"
               min="0"
-              value={formData.github_commits}
+              max="100"
+              value={formData.sleep_performance}
               onChange={handleChange}
               className="w-full p-2 border rounded-md bg-white/5"
+              required
             />
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="fast_until_noon"
-              name="fast_until_noon"
-              checked={formData.fast_until_noon}
-              onChange={handleChange}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <label htmlFor="fast_until_noon" className="ml-2 block text-sm">
-              Fast until noon
-            </label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="minutes_read" className="block text-sm font-medium">
+                Minutes Read
+              </label>
+              <input
+                type="number"
+                id="minutes_read"
+                name="minutes_read"
+                min="0"
+                value={formData.minutes_read}
+                onChange={handleChange}
+                className="w-full p-2 border rounded-md bg-white/5"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="github_commits" className="block text-sm font-medium">
+                GitHub Commits
+              </label>
+              <input
+                type="number"
+                id="github_commits"
+                name="github_commits"
+                min="0"
+                value={formData.github_commits}
+                onChange={handleChange}
+                className="w-full p-2 border rounded-md bg-white/5"
+              />
+            </div>
           </div>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="no_p"
-              name="no_p"
-              checked={formData.no_p}
-              onChange={handleChange}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <label htmlFor="no_p" className="ml-2 block text-sm">
-              No P
-            </label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="fast_until_noon"
+                name="fast_until_noon"
+                checked={formData.fast_until_noon}
+                onChange={handleChange}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <label htmlFor="fast_until_noon" className="ml-2 block text-sm">
+                Fast until noon
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="no_p"
+                name="no_p"
+                checked={formData.no_p}
+                onChange={handleChange}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <label htmlFor="no_p" className="ml-2 block text-sm">
+                No P
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="no_youtube"
+                name="no_youtube"
+                checked={formData.no_youtube}
+                onChange={handleChange}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <label htmlFor="no_youtube" className="ml-2 block text-sm">
+                No YouTube
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="no_rap"
+                name="no_rap"
+                checked={formData.no_rap}
+                onChange={handleChange}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <label htmlFor="no_rap" className="ml-2 block text-sm">
+                No Rap
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="nidra"
+                name="nidra"
+                checked={formData.nidra}
+                onChange={handleChange}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <label htmlFor="nidra" className="ml-2 block text-sm">
+                Nidra
+              </label>
+            </div>
           </div>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="no_youtube"
-              name="no_youtube"
-              checked={formData.no_youtube}
-              onChange={handleChange}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <label htmlFor="no_youtube" className="ml-2 block text-sm">
-              No YouTube
-            </label>
+          <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <p className="text-lg font-semibold text-center">
+              Total Score: {totalScore}/100
+            </p>
+            <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              <p>• Sleep Performance: 0-20 points</p>
+              <p>• Each habit: 10 points</p>
+              <p>• Reading: 1 point per 10 mins (max 15)</p>
+              <p>• GitHub: 2 points per commit (max 15)</p>
+            </div>
           </div>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="no_rap"
-              name="no_rap"
-              checked={formData.no_rap}
-              onChange={handleChange}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <label htmlFor="no_rap" className="ml-2 block text-sm">
-              No Rap
-            </label>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="nidra"
-              name="nidra"
-              checked={formData.nidra}
-              onChange={handleChange}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <label htmlFor="nidra" className="ml-2 block text-sm">
-              Nidra
-            </label>
-          </div>
-        </div>
-
-        <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <p className="text-lg font-semibold text-center">
-            Total Score: {totalScore}/100
-          </p>
-          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            <p>• Sleep Performance: 0-20 points</p>
-            <p>• Each habit: 10 points</p>
-            <p>• Reading: 1 point per 10 mins (max 15)</p>
-            <p>• GitHub: 2 points per commit (max 15)</p>
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
-        >
-          {saving ? 'Saving...' : 'Save Score'}
-        </button>
-      </form>
-    </main>
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+          >
+            {saving ? `Saving...` : `Save Score`}
+          </button>
+        </form>
+      </main>
+    </div>
   );
 }

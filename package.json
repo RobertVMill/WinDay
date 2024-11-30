@@ -13,8 +13,10 @@
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/supabase-js": "^2.46.2",
+    "chart.js": "^4.4.6",
     "next": "15.0.3",
     "react": "19.0.0-rc-66855b96-20241106",
+    "react-chartjs-2": "^5.2.0",
     "react-dom": "19.0.0-rc-66855b96-20241106"
   },
   "devDependencies": {
