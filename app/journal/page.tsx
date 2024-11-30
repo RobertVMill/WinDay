@@ -26,9 +26,8 @@ export default function JournalPage() {
     }
   };
 
-  const uploadImage = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
+  const handleImageUpload = async (file: File): Promise<string> => {
+    const fileName = `${Date.now()}-${file.name}`;
     const filePath = `${fileName}`;
 
     try {
@@ -36,19 +35,23 @@ export default function JournalPage() {
         .from('journal-images')
         .upload(filePath, file);
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
         .from('journal-images')
         .getPublicUrl(filePath);
 
       return publicUrl;
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      throw error;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Couldn't upload image:", error.message);
+      }
+      throw new Error("Couldn't upload image");
     }
+  };
+
+  const formatText = (text: string) => {
+    return text.replace(/'/g, "&rsquo;");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,7 +62,7 @@ export default function JournalPage() {
       let imageUrl = formData.image_url;
       
       if (imageFile) {
-        imageUrl = await uploadImage(imageFile);
+        imageUrl = await handleImageUpload(imageFile);
       }
       
       const { error } = await supabase
@@ -99,7 +102,7 @@ export default function JournalPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: formatText(e.target.value)
     }));
   };
 

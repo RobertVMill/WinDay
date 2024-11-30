@@ -37,30 +37,18 @@ interface Milestone {
   created_at: string;
 }
 
-interface Step {
-  id: number;
-  milestone_id: number;
-  content: string;
-  target_date: string | null;
-  notes: string | null;
-  completed: boolean;
-  created_at: string;
-}
-
 interface TimelineItem {
   id: number;
-  type: 'vision' | 'bhag' | 'milestone';
   content: string;
-  target_date: string | null;
-  completed: boolean;
-  completed_date?: string;
+  target_date: string;
+  completed?: boolean;
+  type: 'vision' | 'bhag' | 'milestone';
 }
 
 export default function GoalsPage() {
   const [vision, setVision] = useState<NorthStarVision | null>(null);
   const [bhags, setBhags] = useState<BHAG[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [steps, setSteps] = useState<Step[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,23 +131,6 @@ export default function GoalsPage() {
           }
 
           setMilestones(milestonesData || []);
-
-          if (milestonesData && milestonesData.length > 0) {
-            // Fetch steps for these milestones
-            const { data: stepsData, error: stepsError } = await supabase
-              .from('steps')
-              .select('*')
-              .in('milestone_id', milestonesData.map(m => m.id))
-              .order('created_at', { ascending: true });
-
-            console.log('Steps Data:', stepsData);
-            if (stepsError) {
-              console.error('Steps Error:', stepsError);
-              throw stepsError;
-            }
-
-            setSteps(stepsData || []);
-          }
         }
       }
     } catch (err: any) {
@@ -423,78 +394,6 @@ export default function GoalsPage() {
     );
   }
 
-  function getTimelineItems(): TimelineItem[] {
-    const items: TimelineItem[] = [];
-    
-    // Add vision if it exists
-    if (vision && vision.target_date) {
-      items.push({
-        id: vision.id,
-        type: 'vision',
-        content: vision.content,
-        target_date: vision.target_date,
-        completed: false
-      });
-    }
-
-    // Add BHAGs
-    bhags.forEach(bhag => {
-      if (bhag.target_date) {
-        items.push({
-          id: bhag.id,
-          type: 'bhag',
-          content: bhag.content,
-          target_date: bhag.target_date,
-          completed: bhag.completed
-        });
-      }
-    });
-
-    // Add Milestones
-    milestones.forEach(milestone => {
-      if (milestone.target_date) {
-        items.push({
-          id: milestone.id,
-          type: 'milestone',
-          content: milestone.content,
-          target_date: milestone.target_date,
-          completed: milestone.completed
-        });
-      }
-    });
-
-    // Sort by target date
-    return items.sort((a, b) => 
-      new Date(a.target_date!).getTime() - new Date(b.target_date!).getTime()
-    );
-  }
-
-  function calculateTimelinePositions(items: TimelineItem[]) {
-    if (items.length === 0) return [];
-
-    // Sort items by date
-    const sortedItems = [...items].sort((a, b) => 
-      new Date(a.target_date!).getTime() - new Date(b.target_date!).getTime()
-    );
-
-    // Use today's date as the start if it's before the first item
-    const today = new Date().setHours(0, 0, 0, 0);
-    const firstItemDate = new Date(sortedItems[0].target_date!).getTime();
-    const startDate = Math.min(today, firstItemDate);
-    
-    // Add 20% more time to the end for future padding
-    const endDate = new Date(sortedItems[sortedItems.length - 1].target_date!).getTime();
-    const timeRange = endDate - startDate;
-    const paddedEndDate = endDate + (timeRange * 0.2);
-
-    // Calculate positions (15% to 95%) for each item to ensure padding
-    return sortedItems.map(item => ({
-      ...item,
-      position: timeRange === 0 ? 50 : // If all dates are the same, center the item
-        15 + ((new Date(item.target_date!).getTime() - startDate) / (paddedEndDate - startDate)) * 80
-    }));
-  }
-
   function renderTimeline() {
     const items = getTimelineItems();
     if (items.length === 0) return null;
@@ -708,6 +607,67 @@ export default function GoalsPage() {
         </div>
       </div>
     );
+  }
+
+  function getTimelineItems(): TimelineItem[] {
+    const items: TimelineItem[] = [];
+    
+    if (vision) {
+      items.push({
+        id: vision.id,
+        content: vision.content,
+        target_date: vision.target_date,
+        type: 'vision'
+      });
+    }
+
+    bhags.forEach(bhag => {
+      items.push({
+        id: bhag.id,
+        content: bhag.content,
+        target_date: bhag.target_date,
+        completed: bhag.completed,
+        type: 'bhag'
+      });
+    });
+
+    milestones.forEach(milestone => {
+      items.push({
+        id: milestone.id,
+        content: milestone.content,
+        target_date: milestone.target_date,
+        completed: milestone.completed,
+        type: 'milestone'
+      });
+    });
+
+    return items;
+  }
+
+  function calculateTimelinePositions(items: TimelineItem[]): TimelineItem[] {
+    if (items.length === 0) return [];
+
+    // Sort items by date
+    const sortedItems = [...items].sort((a, b) => 
+      new Date(a.target_date!).getTime() - new Date(b.target_date!).getTime()
+    );
+
+    // Use today's date as the start if it's before the first item
+    const today = new Date().setHours(0, 0, 0, 0);
+    const firstItemDate = new Date(sortedItems[0].target_date!).getTime();
+    const startDate = Math.min(today, firstItemDate);
+    
+    // Add 20% more time to the end for future padding
+    const endDate = new Date(sortedItems[sortedItems.length - 1].target_date!).getTime();
+    const timeRange = endDate - startDate;
+    const paddedEndDate = endDate + (timeRange * 0.2);
+
+    // Calculate positions (15% to 95%) for each item to ensure padding
+    return sortedItems.map(item => ({
+      ...item,
+      position: timeRange === 0 ? 50 : // If all dates are the same, center the item
+        15 + ((new Date(item.target_date!).getTime() - startDate) / (paddedEndDate - startDate)) * 80
+    }));
   }
 
   function renderMilestones(bhagId: number) {
