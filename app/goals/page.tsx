@@ -54,12 +54,10 @@ export default function GoalsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formType, setFormType] = useState<'vision' | 'bhag'>('vision');
-  const [newVision, setNewVision] = useState({
-    content: '',
-    target_date: '',
-    notes: ''
-  });
-  const [newBhag, setNewBhag] = useState({
+  const [editingVision, setEditingVision] = useState(false);
+  const [editingBhagId, setEditingBhagId] = useState<number | null>(null);
+  const [editingMilestoneId, setEditingMilestoneId] = useState<number | null>(null);
+  const [editFormData, setEditFormData] = useState({
     content: '',
     target_date: '',
     notes: ''
@@ -151,13 +149,18 @@ export default function GoalsPage() {
     try {
       const { error } = await supabase
         .from('north_star_vision')
-        .insert([newVision]);
+        .insert([{
+          content: editFormData.content,
+          target_date: editFormData.target_date,
+          notes: editFormData.notes,
+          is_active: true
+        }]);
 
       if (error) throw error;
 
       fetchAllData();
       setShowAddForm(false);
-      setNewVision({
+      setEditFormData({
         content: '',
         target_date: '',
         notes: ''
@@ -178,13 +181,18 @@ export default function GoalsPage() {
     try {
       const { error } = await supabase
         .from('bhags')
-        .insert([{ ...newBhag, vision_id: vision.id }]);
+        .insert([{ 
+          content: editFormData.content,
+          target_date: editFormData.target_date,
+          notes: editFormData.notes,
+          vision_id: vision.id
+        }]);
 
       if (error) throw error;
 
       fetchAllData();
       setShowAddForm(false);
-      setNewBhag({
+      setEditFormData({
         content: '',
         target_date: '',
         notes: ''
@@ -205,7 +213,12 @@ export default function GoalsPage() {
     try {
       const { error } = await supabase
         .from('milestones')
-        .insert([{ ...newMilestone, bhag_id: selectedBhagId }]);
+        .insert([{ 
+          content: newMilestone.content,
+          target_date: newMilestone.target_date,
+          notes: newMilestone.notes,
+          bhag_id: selectedBhagId
+        }]);
 
       if (error) throw error;
 
@@ -226,35 +239,66 @@ export default function GoalsPage() {
     }
   }
 
-  async function deleteBhag(id: number) {
+  async function handleEditVision(e: React.FormEvent) {
+    e.preventDefault();
+    if (!vision) return;
+
     try {
       const { error } = await supabase
-        .from('bhags')
-        .delete()
-        .eq('id', id);
+        .from('north_star_vision')
+        .update(editFormData)
+        .eq('id', vision.id);
 
       if (error) throw error;
 
       fetchAllData();
+      setEditingVision(false);
     } catch (error: unknown) {
       if (error instanceof Error) {
         setError(error.message);
       } else {
-        setError('An error occurred while deleting the BHAG');
+        setError('An error occurred while updating the vision');
       }
     }
   }
 
-  async function toggleMilestoneComplete(milestone: Milestone, completed: boolean) {
+  async function handleEditBhag(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingBhagId) return;
+
     try {
       const { error } = await supabase
-        .from('milestones')
-        .update({ completed })
-        .eq('id', milestone.id);
+        .from('bhags')
+        .update(editFormData)
+        .eq('id', editingBhagId);
 
       if (error) throw error;
 
       fetchAllData();
+      setEditingBhagId(null);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An error occurred while updating the BHAG');
+      }
+    }
+  }
+
+  async function handleEditMilestone(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingMilestoneId) return;
+
+    try {
+      const { error } = await supabase
+        .from('milestones')
+        .update(editFormData)
+        .eq('id', editingMilestoneId);
+
+      if (error) throw error;
+
+      fetchAllData();
+      setEditingMilestoneId(null);
     } catch (error: unknown) {
       if (error instanceof Error) {
         setError(error.message);
@@ -264,10 +308,99 @@ export default function GoalsPage() {
     }
   }
 
+  function startEditing(type: 'vision' | 'bhag' | 'milestone', item: NorthStarVision | BHAG | Milestone) {
+    setEditFormData({
+      content: item.content,
+      target_date: item.target_date || '',
+      notes: item.notes || ''
+    });
+
+    if (type === 'vision') {
+      setEditingVision(true);
+    } else if (type === 'bhag') {
+      setEditingBhagId((item as BHAG).id);
+    } else {
+      setEditingMilestoneId((item as Milestone).id);
+    }
+  }
+
+  function renderEditForm(type: 'vision' | 'bhag' | 'milestone') {
+    const handleSubmit = type === 'vision' 
+      ? handleEditVision 
+      : type === 'bhag' 
+        ? handleEditBhag 
+        : handleEditMilestone;
+
+    const handleCancel = () => {
+      if (type === 'vision') setEditingVision(false);
+      else if (type === 'bhag') setEditingBhagId(null);
+      else setEditingMilestoneId(null);
+    };
+
+    return (
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {type === 'vision' ? 'North Star Vision' : type === 'bhag' ? 'BHAG' : 'Milestone'}
+            </label>
+            <textarea
+              required
+              value={editFormData.content}
+              onChange={(e) => setEditFormData({ ...editFormData, content: e.target.value })}
+              className="w-full border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Target Date (Optional)
+            </label>
+            <input
+              type="date"
+              value={editFormData.target_date}
+              onChange={(e) => setEditFormData({ ...editFormData, target_date: e.target.value })}
+              className="w-full border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Notes (Optional)
+            </label>
+            <textarea
+              value={editFormData.notes}
+              onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+              className="w-full border rounded px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              rows={2}
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 flex gap-4">
+          <button
+            type="submit"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+          >
+            Save Changes
+          </button>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    );
+  }
+
   function renderForm() {
     const isVisionForm = formType === 'vision';
-    const formData = isVisionForm ? newVision : newBhag;
-    const setFormData = isVisionForm ? setNewVision : setNewBhag;
+    const formData = isVisionForm ? editFormData : editFormData;
+    const setFormData = isVisionForm ? setEditFormData : setEditFormData;
     const handleSubmit = isVisionForm ? handleVisionSubmit : handleBhagSubmit;
 
     return (
@@ -686,78 +819,105 @@ export default function GoalsPage() {
       <div className="ml-8 mt-4 space-y-2">
         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Milestones:</h4>
         {bhagMilestones.map((milestone) => (
-          <div key={milestone.id} className="flex items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={milestone.completed || false}
-              onChange={(e) => toggleMilestoneComplete(milestone, e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <div className={`flex-1 ${milestone.completed ? 'text-gray-500 line-through' : ''}`}>
-              <p className="text-gray-800 dark:text-gray-200">{milestone.content}</p>
-              {milestone.target_date && (
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Target: {new Date(milestone.target_date).toLocaleDateString()}
-                </p>
-              )}
-              {milestone.notes && (
-                <p className="text-xs text-gray-600 dark:text-gray-400">{milestone.notes}</p>
-              )}
-            </div>
+          <div key={milestone.id}>
+            {editingMilestoneId === milestone.id ? (
+              renderEditForm('milestone')
+            ) : (
+              <div className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={milestone.completed || false}
+                  onChange={(e) => toggleMilestoneComplete(milestone, e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div className={`flex-1 ${milestone.completed ? 'text-gray-500 line-through' : ''}`}>
+                  <p className="text-gray-800 dark:text-gray-200">{milestone.content}</p>
+                  {milestone.target_date && (
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Target: {new Date(milestone.target_date).toLocaleDateString()}
+                    </p>
+                  )}
+                  {milestone.notes && (
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{milestone.notes}</p>
+                  )}
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => startEditing('milestone', milestone)}
+                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => deleteMilestone(milestone.id)}
+                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
     );
   }
 
-  function renderBhags() {
-    return (
-      <div className="space-y-4">
-        {bhags.map((bhag) => (
-          <div key={bhag.id} className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg">
-            <div className="flex justify-between items-start">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  North Star Vision
-                </h2>
-                <p className="text-gray-800 dark:text-gray-200">{bhag.content}</p>
-                {bhag.target_date && (
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Target: {new Date(bhag.target_date).toLocaleDateString()}
-                  </p>
-                )}
-                {bhag.notes && (
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{bhag.notes}</p>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setSelectedBhagId(bhag.id);
-                    setShowMilestoneForm(true);
-                  }}
-                  className="text-sm text-blue-500 hover:text-blue-600"
-                >
-                  + Add Milestone
-                </button>
-                <button
-                  onClick={() => {
-                    if (window.confirm('Are you sure you want to delete this BHAG?')) {
-                      deleteBhag(bhag.id);
-                    }
-                  }}
-                  className="text-sm text-red-500 hover:text-red-600"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-            {renderMilestones(bhag.id)}
-            {showMilestoneForm && selectedBhagId === bhag.id && renderMilestoneForm()}
-          </div>
-        ))}
-      </div>
-    );
+  async function deleteBhag(id: number) {
+    try {
+      const { error } = await supabase
+        .from('bhags')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      fetchAllData();
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An error occurred while deleting the BHAG');
+      }
+    }
+  }
+
+  async function toggleMilestoneComplete(milestone: Milestone, completed: boolean) {
+    try {
+      const { error } = await supabase
+        .from('milestones')
+        .update({ completed })
+        .eq('id', milestone.id);
+
+      if (error) throw error;
+
+      fetchAllData();
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An error occurred while updating the milestone');
+      }
+    }
+  }
+
+  async function deleteMilestone(id: number) {
+    try {
+      const { error } = await supabase
+        .from('milestones')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      fetchAllData();
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An error occurred while deleting the milestone');
+      }
+    }
   }
 
   if (loading) {
@@ -769,78 +929,119 @@ export default function GoalsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-4xl mx-auto py-8 px-4">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">Goals</h1>
+
+      {/* Vision Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Vision & Goals</h1>
-        <p className="text-gray-600 dark:text-gray-300">
-          Define your North Star vision, break it down into BHAGs (Big Hairy Audacious Goals),
-          then into milestones, and finally into actionable steps.
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {renderTimeline()}
-
-      {!vision ? (
-        <div className="mb-8">
-          {!showAddForm ? (
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">North Star Vision</h2>
+          {!vision && !showAddForm && (
             <button
               onClick={() => {
-                setFormType('vision');
                 setShowAddForm(true);
+                setFormType('vision');
               }}
               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
             >
-              + Add North Star Vision
+              Add Vision
             </button>
-          ) : (
-            renderForm()
           )}
         </div>
-      ) : (
-        <>
-          <div className="mb-8 bg-indigo-50 dark:bg-indigo-900 p-6 rounded-lg">
-            <div className="flex justify-between items-start">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  North Star Vision
-                </h2>
-                <p className="text-gray-800 dark:text-gray-200">{vision.content}</p>
-                {vision.target_date && (
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Target: {new Date(vision.target_date).toLocaleDateString()}
-                  </p>
-                )}
-                {vision.notes && (
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{vision.notes}</p>
-                )}
-              </div>
-              {!showAddForm && (
-                <button
-                  onClick={() => {
-                    setFormType('bhag');
-                    setShowAddForm(true);
-                  }}
-                  className="text-sm text-blue-500 hover:text-blue-600"
-                >
-                  + Add BHAG
-                </button>
-              )}
+
+        {vision && !editingVision && (
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+            <p className="text-gray-900 dark:text-white mb-4">{vision.content}</p>
+            {vision.target_date && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                Target: {new Date(vision.target_date).toLocaleDateString()}
+              </p>
+            )}
+            {vision.notes && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{vision.notes}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => startEditing('vision', vision)}
+                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                Edit
+              </button>
             </div>
           </div>
+        )}
 
-          {showAddForm && formType === 'bhag' ? (
-            renderForm()
-          ) : (
-            renderBhags()
-          )}
-        </>
-      )}
+        {editingVision && renderEditForm('vision')}
+
+        {/* BHAGs Section */}
+        <div className="mt-12">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">BHAGs</h2>
+            {vision && !showAddForm && (
+              <button
+                onClick={() => {
+                  setShowAddForm(true);
+                  setFormType('bhag');
+                }}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+              >
+                Add BHAG
+              </button>
+            )}
+          </div>
+
+          {bhags.map((bhag) => (
+            <div key={bhag.id} className="mb-6">
+              {editingBhagId === bhag.id ? (
+                renderEditForm('bhag')
+              ) : (
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                  <p className="text-gray-900 dark:text-white mb-4">{bhag.content}</p>
+                  {bhag.target_date && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      Target: {new Date(bhag.target_date).toLocaleDateString()}
+                    </p>
+                  )}
+                  {bhag.notes && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{bhag.notes}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => startEditing('bhag', bhag)}
+                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => deleteBhag(bhag.id)}
+                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMilestoneForm(true);
+                        setSelectedBhagId(bhag.id);
+                      }}
+                      className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                    >
+                      Add Milestone
+                    </button>
+                  </div>
+                  {/* Render milestones */}
+                  {renderMilestones(bhag.id)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {showAddForm && renderForm()}
+
+      {showMilestoneForm && renderMilestoneForm()}
+
+      {renderTimeline()}
     </div>
   );
 }
