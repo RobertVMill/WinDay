@@ -8,24 +8,27 @@ import Image from 'next/image';
 const DEFAULT_STRATEGY = `Trust the process. Love the work. Burn the ships. Build consistent momentum.
 
 🧍🏽‍♂️ BODY POWERFUL
-- WC Workouts
-- Fast til noon
-- Fiber and protein
-- Huge sleeps
+- Make world class workouts automatic
+- Fast til the afternoon
+- Sleep as long and deep as you can
 
 🧠 MIND SHARP
-- Find dopamine during work
+- Keep finding dopamine during work
 - Make your clients euphoric
-- Listen your ass off
+- Listen your ass of
+- Leverage weekends for deep work
 
 🦠 GUT FLOURISHING
-- Fiber and protein
+- Go big on fiber and protein
+- No sugar or salt
 - Low sugar & sodium
-- Eat moderately
+- Eat slowly, and until you're comfortably full
 
 ❤️ Heart
 - Meditate on love
-- Give 10X every time`;
+- Give 10X every time, doesn't matter who the person is
+- Get back to people ASAP, doesn't matter who the person is
+- Connect with people as often as possbile`;
 
 interface JournalEntry {
   id: number;
@@ -33,11 +36,54 @@ interface JournalEntry {
   gratitude: string;
   gifts: string;
   strategy: string;
+  strategy_checks?: Record<string, boolean>;
   best_day: string;
   image_url: string;
   workout_notes: string;
   workout_category: string;
   deep_flow_activity: string;
+}
+
+function parseStrategy(strategy: string): { text: string; items: string[] }[] {
+  const sections = strategy.split('\n\n');
+  return sections.map(section => {
+    const [title, ...items] = section.split('\n');
+    return {
+      text: title,
+      items: items.filter(item => item.startsWith('- ')).map(item => item.substring(2))
+    };
+  });
+}
+
+function StrategySection({ strategy, checks, onToggle }: { 
+  strategy: string; 
+  checks?: Record<string, boolean>;
+  onToggle?: (item: string, checked: boolean) => void;
+}) {
+  const sections = parseStrategy(strategy);
+  
+  return (
+    <div className="space-y-4">
+      {sections.map((section, idx) => (
+        <div key={idx} className="space-y-2">
+          <div className="font-medium">{section.text}</div>
+          {section.items.map((item, itemIdx) => (
+            <div key={itemIdx} className="flex items-start gap-2 ml-4">
+              <input
+                type="checkbox"
+                checked={checks?.[item] || false}
+                onChange={(e) => onToggle?.(item, e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className={checks?.[item] ? 'line-through text-gray-500' : ''}>
+                {item}
+              </span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function PreviousEntries({ onEntryClick }: { onEntryClick: (entry: JournalEntry) => void }) {
@@ -242,115 +288,90 @@ function EntryDetail({ entry, onClose }: { entry: JournalEntry; onClose: () => v
 
 export default function JournalPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    gratitude: '',
-    gifts: '',
-    strategy: DEFAULT_STRATEGY,
-    best_day: '',
-    date: new Date().toISOString().split('T')[0],
-    image_url: '',
-    workout_notes: '',
-    workout_category: '',
-    deep_flow_activity: ''
-  });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [gratitude, setGratitude] = useState('');
+  const [gifts, setGifts] = useState('');
+  const [strategy, setStrategy] = useState(DEFAULT_STRATEGY);
+  const [strategyChecks, setStrategyChecks] = useState<Record<string, boolean>>({});
+  const [bestDay, setBestDay] = useState('');
+  const [workoutNotes, setWorkoutNotes] = useState('');
+  const [workoutCategory, setWorkoutCategory] = useState('');
+  const [deepFlowActivity, setDeepFlowActivity] = useState('');
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
-  const [timestamp, setTimestamp] = useState(Date.now());
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setImageFile(e.target.files[0]);
-    }
-  };
-
-  const uploadImage = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
-
-    try {
-      const { error: uploadError } = await supabase.storage
-        .from('journal-images')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('journal-images')
-        .getPublicUrl(filePath);
-
-      return publicUrl;
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      throw error;
-    }
-  };
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setUploading(true);
-    
+    setIsSubmitting(true);
+
     try {
-      let imageUrl = formData.image_url;
-      
-      if (imageFile) {
-        imageUrl = await uploadImage(imageFile);
-      }
-      
       const { error } = await supabase
         .from('journal_entries')
-        .insert([{ ...formData, image_url: imageUrl }]);
-        
+        .insert([
+          {
+            date,
+            gratitude,
+            gifts,
+            strategy,
+            strategy_checks: strategyChecks,
+            best_day: bestDay,
+            workout_notes: workoutNotes,
+            workout_category: workoutCategory,
+            deep_flow_activity: deepFlowActivity,
+          },
+        ])
+        .select()
+        .single();
+
       if (error) throw error;
+
+      // Reset form
+      setGratitude('');
+      setGifts('');
+      setStrategy(DEFAULT_STRATEGY);
+      setStrategyChecks({});
+      setBestDay('');
+      setWorkoutNotes('');
+      setWorkoutCategory('');
+      setDeepFlowActivity('');
       
-      alert('Entry saved successfully!');
-      // Refresh the entries list by forcing a re-render
-      setTimestamp(Date.now());
-      setSelectedEntry(null);
-      // Clear form except date
-      setFormData({
-        gratitude: '',
-        gifts: '',
-        strategy: DEFAULT_STRATEGY,
-        best_day: '',
-        date: new Date().toISOString().split('T')[0],
-        image_url: '',
-        workout_notes: '',
-        workout_category: '',
-        deep_flow_activity: ''
-      });
-      setImageFile(null);
-      if (document.getElementById('image-upload') instanceof HTMLInputElement) {
-        (document.getElementById('image-upload') as HTMLInputElement).value = '';
-      }
-      
-      // Navigate to scorecard
-      router.push('/scorecard');
+      router.refresh();
     } catch (error) {
-      console.error('Error saving entry:', error);
-      alert('Error saving entry. Please try again.');
+      console.error('Error inserting entry:', error);
     } finally {
-      setUploading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleEntryClick = (entry: JournalEntry) => {
     setSelectedEntry(entry);
+    setStrategyChecks(entry.strategy_checks || {});
   };
 
-  const handleCloseEntry = () => {
-    setSelectedEntry(null);
+  const handleStrategyToggle = async (item: string, checked: boolean) => {
+    const newChecks = { ...strategyChecks, [item]: checked };
+    setStrategyChecks(newChecks);
+
+    if (selectedEntry) {
+      try {
+        const { error } = await supabase
+          .from('journal_entries')
+          .update({ strategy_checks: newChecks })
+          .eq('id', selectedEntry.id);
+
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error updating strategy checks:', error);
+      }
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
-        <PreviousEntries onEntryClick={handleEntryClick} key={timestamp} />
+        <PreviousEntries onEntryClick={handleEntryClick} />
         {selectedEntry && (
-          <EntryDetail entry={selectedEntry} onClose={handleCloseEntry} />
+          <EntryDetail entry={selectedEntry} onClose={() => setSelectedEntry(null)} />
         )}
         <form onSubmit={handleSubmit} className="space-y-6 bg-gray-800 p-8 rounded-lg shadow">
           <div>
@@ -359,8 +380,8 @@ export default function JournalPage() {
             </label>
             <input
               type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
             />
           </div>
@@ -370,8 +391,8 @@ export default function JournalPage() {
               What are you grateful for today?
             </label>
             <textarea
-              value={formData.gratitude}
-              onChange={(e) => setFormData({ ...formData, gratitude: e.target.value })}
+              value={gratitude}
+              onChange={(e) => setGratitude(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               rows={3}
             />
@@ -382,24 +403,38 @@ export default function JournalPage() {
               What are your gifts to share with the world?
             </label>
             <textarea
-              value={formData.gifts}
-              onChange={(e) => setFormData({ ...formData, gifts: e.target.value })}
+              value={gifts}
+              onChange={(e) => setGifts(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               rows={3}
               placeholder="What unique talents, insights, or contributions can you offer to make the world better?"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              What is my strategy today?
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Strategy
             </label>
-            <textarea
-              value={formData.strategy}
-              onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 font-mono"
-              rows={15}
-            />
+            {selectedEntry ? (
+              <StrategySection 
+                strategy={selectedEntry.strategy} 
+                checks={strategyChecks}
+                onToggle={handleStrategyToggle}
+              />
+            ) : (
+              <div>
+                <StrategySection 
+                  strategy={strategy} 
+                  checks={strategyChecks}
+                  onToggle={handleStrategyToggle}
+                />
+                <textarea
+                  value={strategy}
+                  onChange={(e) => setStrategy(e.target.value)}
+                  className="mt-4 w-full h-48 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+            )}
           </div>
 
           <div>
@@ -411,9 +446,9 @@ export default function JournalPage() {
                 <button
                   key={category}
                   type="button"
-                  onClick={() => setFormData({ ...formData, workout_category: category })}
+                  onClick={() => setWorkoutCategory(category)}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-                    formData.workout_category === category
+                    workoutCategory === category
                       ? 'bg-indigo-600 text-white'
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
@@ -429,8 +464,8 @@ export default function JournalPage() {
               Workout Notes from Yesterday
             </label>
             <textarea
-              value={formData.workout_notes}
-              onChange={(e) => setFormData({ ...formData, workout_notes: e.target.value })}
+              value={workoutNotes}
+              onChange={(e) => setWorkoutNotes(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               rows={3}
             />
@@ -441,8 +476,8 @@ export default function JournalPage() {
               What is my Deep Flow Activity today?
             </label>
             <textarea
-              value={formData.deep_flow_activity}
-              onChange={(e) => setFormData({ ...formData, deep_flow_activity: e.target.value })}
+              value={deepFlowActivity}
+              onChange={(e) => setDeepFlowActivity(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               rows={3}
               placeholder="What activity will put you in a state of deep focus and flow?"
@@ -450,29 +485,12 @@ export default function JournalPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Upload Image
-            </label>
-            <input
-              id="image-upload"
-              type="file"
-              onChange={handleImageChange}
-              className="mt-1 block w-full text-sm text-gray-300
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-full file:border-0
-                file:text-sm file:font-semibold
-                file:bg-indigo-600 file:text-white
-                hover:file:bg-indigo-700"
-            />
-          </div>
-
-          <div>
             <button
               type="submit"
-              disabled={uploading}
+              disabled={isSubmitting}
               className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
-              {uploading ? 'Saving...' : 'Save Entry'}
+              {isSubmitting ? 'Saving...' : 'Save Entry'}
             </button>
           </div>
         </form>
