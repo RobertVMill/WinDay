@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
-const DEFAULT_STRATEGY = `Trust the process. Love the work. Burn the ships. Build consistent momentum.
+const DEFAULT_STRATEGY = `Trust the process. Love the work. Believe in your destiny. Build consistent momentum.
 
 🧍🏽‍♂️ BODY POWERFUL
 - Make world class workouts automatic
