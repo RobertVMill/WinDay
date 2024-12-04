@@ -422,18 +422,11 @@ export default function JournalPage() {
                 onToggle={handleStrategyToggle}
               />
             ) : (
-              <div>
-                <StrategySection 
-                  strategy={strategy} 
-                  checks={strategyChecks}
-                  onToggle={handleStrategyToggle}
-                />
-                <textarea
-                  value={strategy}
-                  onChange={(e) => setStrategy(e.target.value)}
-                  className="mt-4 w-full h-48 p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
+              <StrategySection 
+                strategy={strategy} 
+                checks={strategyChecks}
+                onToggle={handleStrategyToggle}
+              />
             )}
           </div>
 
