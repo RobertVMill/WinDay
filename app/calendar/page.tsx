@@ -132,13 +132,17 @@ export default function CalendarPage() {
         }),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get response');
+        throw new Error(data.error || 'Failed to get response');
       }
 
-      const data = await response.json();
-      setMessages(prev => [...prev, data]);
+      if (data.content) {
+        setMessages(prev => [...prev, { role: 'assistant' as const, content: data.content }]);
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (error) {
       console.error('Chat error:', error);
       setError(error instanceof Error ? error.message : 'Failed to get response');
@@ -148,10 +152,10 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
+    <div className="h-screen flex flex-col bg-gray-900">
       <QuoteDisplay variant="banner" autoRefresh={true} refreshInterval={300000} />
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col" style={{ height: '80vh' }}>
+        <div className="w-full max-w-4xl bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col" style={{ height: '80vh' }}>
           {/* Chat Header */}
           <div className="p-4 border-b dark:border-gray-700 flex-shrink-0">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AI Schedule Assistant</h1>

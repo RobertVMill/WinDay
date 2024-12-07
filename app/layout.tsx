@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { Space_Grotesk } from 'next/font/google';
 import "./globals.css";
 import Navbar from "./components/Navbar";
+import AIAssistant from "./components/AIAssistant"; // Added import statement
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -36,9 +37,12 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
       </head>
-      <body className={`font-space-grotesk antialiased bg-gray-900`}>
-        <Navbar />
-        {children}
+      <body className={`${spaceGrotesk.variable} bg-gray-900`}>
+        <div className="min-h-screen bg-gray-900">
+          <Navbar />
+          {children}
+          <AIAssistant />
+        </div>
       </body>
     </html>
   );
