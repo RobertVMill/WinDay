@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import QuoteDisplay from '../components/QuoteDisplay';
 
 const DEFAULT_STRATEGY = `Trust the process. Love the work. Believe in your destiny. Build consistent momentum.
 
@@ -303,68 +304,69 @@ function PreviousEntries({ onEntryClick }: { onEntryClick: (entry: JournalEntry)
 
 function EntryDetail({ entry, onClose }: { entry: JournalEntry; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-white">
-            {new Date(entry.date).toLocaleDateString()}
-          </h2>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+        <div className="flex justify-between items-start mb-4">
+          <h2 className="text-2xl font-bold">{new Date(entry.date).toLocaleDateString()}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
-            ✕
+            ×
           </button>
         </div>
-        
-        {entry.image_url && (
-          <div className="mb-4">
-            <Image
-              src={entry.image_url}
-              alt="Journal entry"
-              width={400}
-              height={200}
-              className="w-full h-64 object-cover rounded"
-            />
-          </div>
-        )}
-        
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold text-white">Gratitude</h3>
-            <p className="text-gray-300">{entry.gratitude}</p>
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-semibold text-white">Gifts Given</h3>
-            <p className="text-gray-300">{entry.gifts}</p>
-          </div>
-          
-          <div>
-            <h3 className="text-lg font-semibold text-white">Strategy</h3>
-            <p className="text-gray-300">{entry.strategy}</p>
-          </div>
-          
-          {entry.workout_notes && (
-            <div>
-              <h3 className="text-lg font-semibold text-white">Workout Notes from Yesterday</h3>
-              <p className="text-gray-300">{entry.workout_notes}</p>
+
+        <div className="space-y-6">
+          {entry.image_url && (
+            <div className="relative w-full h-48">
+              <Image
+                src={entry.image_url}
+                alt="Journal entry image"
+                fill
+                className="object-cover rounded-lg"
+              />
             </div>
           )}
-          
+
+          <div>
+            <h3 className="font-medium mb-2">Gratitude</h3>
+            <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{entry.gratitude}</p>
+          </div>
+
+          <div>
+            <h3 className="font-medium mb-2">Gifts</h3>
+            <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{entry.gifts}</p>
+          </div>
+
           {entry.workout_category && (
             <div>
-              <h3 className="text-lg font-semibold text-white">Workout Category</h3>
-              <p className="text-gray-300">{entry.workout_category}</p>
+              <h3 className="font-medium mb-2">Workout Performance Yesterday</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                <span className="font-medium">Category:</span> {entry.workout_category}
+              </p>
+              <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap mt-2">{entry.workout_notes}</p>
             </div>
           )}
-          
+
           {entry.deep_flow_activity && (
             <div>
-              <h3 className="text-lg font-semibold text-white">Deep Flow Activity</h3>
-              <p className="text-gray-300">{entry.deep_flow_activity}</p>
+              <h3 className="font-medium mb-2">Deep Flow Activity</h3>
+              <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{entry.deep_flow_activity}</p>
             </div>
           )}
+
+          <div>
+            <h3 className="font-medium mb-2">Best Day Vision</h3>
+            <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{entry.best_day}</p>
+          </div>
+
+          <div>
+            <h3 className="font-medium mb-2">Strategy</h3>
+            <StrategySection 
+              strategy={entry.strategy} 
+              checks={entry.strategy_checks}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -372,16 +374,29 @@ function EntryDetail({ entry, onClose }: { entry: JournalEntry; onClose: () => v
 }
 
 export default function JournalPage() {
-  const [entry, setEntry] = useState<Partial<JournalEntry>>({
+  const [formData, setFormData] = useState<Partial<JournalEntry>>({
     gratitude: '',
     gifts: '',
     strategy: DEFAULT_STRATEGY,
+    strategy_checks: {},
     best_day: '',
     workout_notes: '',
     workout_category: '',
-    deep_flow_activity: '',
-    strategy_checks: {},
+    deep_flow_activity: ''
   });
+  const [scoreData, setScoreData] = useState({
+    sleep_performance: 0,
+    fast_until_noon: false,
+    minutes_read: 0,
+    github_commits: 0,
+    no_p: false,
+    no_youtube: false,
+    no_rap: false,
+    nidra: false,
+    mood_score: 0,
+    energy_score: 0
+  });
+  const [showSuccess, setShowSuccess] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
@@ -389,13 +404,14 @@ export default function JournalPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setShowSuccess(false);
 
     try {
       // Save to journal entries
       const { data, error } = await supabase
         .from('journal_entries')
         .insert([{
-          ...entry,
+          ...formData,
           date: new Date().toISOString(),
         }])
         .select()
@@ -410,25 +426,58 @@ export default function JournalPage() {
           {
             date: new Date().toISOString(),
             journal_entry_id: data.id,
-            mood_score: 0,
-            energy_score: 0,
-            notes: entry.gratitude
+            mood_score: scoreData.mood_score,
+            energy_score: scoreData.energy_score,
+            notes: formData.gratitude
           }
         ]);
 
       if (scorecardError) throw scorecardError;
 
-      setEntry({
+      // Save to daily_scores
+      const { error: dailyScoreError } = await supabase
+        .from('daily_scores')
+        .insert([{
+          date: new Date().toISOString(),
+          sleep_performance: scoreData.sleep_performance,
+          fast_until_noon: scoreData.fast_until_noon,
+          minutes_read: scoreData.minutes_read,
+          github_commits: scoreData.github_commits,
+          no_p: scoreData.no_p,
+          no_youtube: scoreData.no_youtube,
+          no_rap: scoreData.no_rap,
+          nidra: scoreData.nidra,
+          total_score: 0 // Calculate this based on your scoring logic
+        }]);
+
+      if (dailyScoreError) throw dailyScoreError;
+
+      setFormData({
         gratitude: '',
         gifts: '',
         strategy: DEFAULT_STRATEGY,
+        strategy_checks: {},
         best_day: '',
         workout_notes: '',
         workout_category: '',
-        deep_flow_activity: '',
-        strategy_checks: {},
+        deep_flow_activity: ''
       });
 
+      setScoreData({
+        sleep_performance: 0,
+        fast_until_noon: false,
+        minutes_read: 0,
+        github_commits: 0,
+        no_p: false,
+        no_youtube: false,
+        no_rap: false,
+        nidra: false,
+        mood_score: 0,
+        energy_score: 0
+      });
+
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
       router.refresh();
     } catch (error) {
       console.error('Error saving journal entry:', error);
@@ -438,7 +487,7 @@ export default function JournalPage() {
   };
 
   const handleStrategyCheck = (item: string, checked: boolean) => {
-    setEntry(prev => ({
+    setFormData(prev => ({
       ...prev,
       strategy_checks: {
         ...prev.strategy_checks,
@@ -448,11 +497,12 @@ export default function JournalPage() {
   };
 
   const handleEntryChange = (field: keyof JournalEntry, value: string) => {
-    setEntry(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 font-spaceGrotesk">
+      <QuoteDisplay variant="banner" autoRefresh={true} refreshInterval={300000} />
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-white">Journal</h1>
@@ -460,6 +510,11 @@ export default function JournalPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {showSuccess && (
+            <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in-out">
+              Journal entry saved successfully!
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-6">
               <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
@@ -467,7 +522,7 @@ export default function JournalPage() {
                   Today&apos;s Gratitude
                 </label>
                 <textarea
-                  value={entry.gratitude}
+                  value={formData.gratitude}
                   onChange={(e) => handleEntryChange('gratitude', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="What are you grateful for today?"
@@ -479,7 +534,7 @@ export default function JournalPage() {
                   Today&apos;s Gifts
                 </label>
                 <textarea
-                  value={entry.gifts}
+                  value={formData.gifts}
                   onChange={(e) => handleEntryChange('gifts', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="What gifts did you receive or give today?"
@@ -491,7 +546,7 @@ export default function JournalPage() {
                   Deep Flow Activity
                 </label>
                 <textarea
-                  value={entry.deep_flow_activity}
+                  value={formData.deep_flow_activity}
                   onChange={(e) => handleEntryChange('deep_flow_activity', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="What activity got you into deep flow today?"
@@ -506,8 +561,8 @@ export default function JournalPage() {
                 </label>
                 <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
                   <StrategySection 
-                    strategy={entry.strategy || DEFAULT_STRATEGY}
-                    checks={entry.strategy_checks}
+                    strategy={formData.strategy || DEFAULT_STRATEGY}
+                    checks={formData.strategy_checks}
                     onToggle={handleStrategyCheck}
                   />
                 </div>
@@ -515,14 +570,26 @@ export default function JournalPage() {
 
               <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Workout Notes
+                  Workout Performance Yesterday
                 </label>
-                <textarea
-                  value={entry.workout_notes}
-                  onChange={(e) => handleEntryChange('workout_notes', e.target.value)}
-                  className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  placeholder="How was your workout today?"
-                />
+                <select
+                  value={formData.workout_category}
+                  onChange={(e) => setFormData(prev => ({ ...prev, workout_category: e.target.value }))}
+                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                >
+                  <option value="">Select category</option>
+                  <option value="upper_body">Upper Body Strength</option>
+                  <option value="lower_body">Lower Body Strength</option>
+                  <option value="endurance">Endurance</option>
+                </select>
+                {formData.workout_category && (
+                  <textarea
+                    value={formData.workout_notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, workout_notes: e.target.value }))}
+                    placeholder="How was your workout performance yesterday? Include exercises, sets, reps, and any notable achievements or challenges..."
+                    className="mt-2 w-full p-2 border rounded h-32 dark:bg-gray-700 dark:border-gray-600"
+                  />
+                )}
               </div>
 
               <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
@@ -530,11 +597,126 @@ export default function JournalPage() {
                   Make Today Your Best Day
                 </label>
                 <textarea
-                  value={entry.best_day}
+                  value={formData.best_day}
                   onChange={(e) => handleEntryChange('best_day', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="What would make today your absolute best day?"
                 />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
+              <label className="block text-sm font-medium text-gray-300 mb-4">
+                Daily Scores
+              </label>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-400">Sleep Performance (0-10)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={scoreData.sleep_performance}
+                    onChange={(e) => setScoreData(prev => ({ ...prev, sleep_performance: parseInt(e.target.value) || 0 }))}
+                    className="mt-1 w-full p-2 bg-gray-700 rounded"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={scoreData.fast_until_noon}
+                      onChange={(e) => setScoreData(prev => ({ ...prev, fast_until_noon: e.target.checked }))}
+                      className="h-4 w-4 rounded"
+                    />
+                    <label className="ml-2 text-sm text-gray-400">Fast until noon</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={scoreData.no_p}
+                      onChange={(e) => setScoreData(prev => ({ ...prev, no_p: e.target.checked }))}
+                      className="h-4 w-4 rounded"
+                    />
+                    <label className="ml-2 text-sm text-gray-400">No P</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={scoreData.no_youtube}
+                      onChange={(e) => setScoreData(prev => ({ ...prev, no_youtube: e.target.checked }))}
+                      className="h-4 w-4 rounded"
+                    />
+                    <label className="ml-2 text-sm text-gray-400">No YouTube</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={scoreData.no_rap}
+                      onChange={(e) => setScoreData(prev => ({ ...prev, no_rap: e.target.checked }))}
+                      className="h-4 w-4 rounded"
+                    />
+                    <label className="ml-2 text-sm text-gray-400">No Rap</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={scoreData.nidra}
+                      onChange={(e) => setScoreData(prev => ({ ...prev, nidra: e.target.checked }))}
+                      className="h-4 w-4 rounded"
+                    />
+                    <label className="ml-2 text-sm text-gray-400">Nidra</label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400">Minutes Read</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={scoreData.minutes_read}
+                    onChange={(e) => setScoreData(prev => ({ ...prev, minutes_read: parseInt(e.target.value) || 0 }))}
+                    className="mt-1 w-full p-2 bg-gray-700 rounded"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400">GitHub Commits</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={scoreData.github_commits}
+                    onChange={(e) => setScoreData(prev => ({ ...prev, github_commits: parseInt(e.target.value) || 0 }))}
+                    className="mt-1 w-full p-2 bg-gray-700 rounded"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400">Mood Score (0-10)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={scoreData.mood_score}
+                    onChange={(e) => setScoreData(prev => ({ ...prev, mood_score: parseInt(e.target.value) || 0 }))}
+                    className="mt-1 w-full p-2 bg-gray-700 rounded"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400">Energy Score (0-10)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={scoreData.energy_score}
+                    onChange={(e) => setScoreData(prev => ({ ...prev, energy_score: parseInt(e.target.value) || 0 }))}
+                    className="mt-1 w-full p-2 bg-gray-700 rounded"
+                  />
+                </div>
               </div>
             </div>
           </div>

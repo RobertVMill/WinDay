@@ -26,7 +26,7 @@ const templates: DayTemplate[] = [
         time: '5:00 AM', 
         activity: '[WJG] Wake up',
         mindset: 'Max gratitude',
-        optimalState: 'Feeling excited for the day'
+        optimalState: 'Jumping out of bed excited'
       },
       { 
         time: '5:00-5:05 AM', 
@@ -37,14 +37,14 @@ const templates: DayTemplate[] = [
       { 
         time: '5:05-5:30 AM', 
         activity: 'Meditate',
-        mindset: 'Sharpen',
-        optimalState: 'Everything falls away'
+        mindset: 'Balance attention on the breath',
+        optimalState: 'Drip seretonin'
       },
       { 
         time: '5:30-6:30 AM', 
         activity: 'Workout',
-        mindset: 'Damage and breathe',
-        optimalState: 'Feeling flooded with epinephrine'
+        mindset: 'Find pain, attack apin',
+        optimalState: 'Epinephrine drip'
       },
       { 
         time: '6:30-6:40 AM', 
@@ -67,8 +67,8 @@ const templates: DayTemplate[] = [
       { 
         time: '7:00 AM-5:00 PM', 
         activity: 'Deep work',
-        mindset: 'Dopamine',
-        optimalState: 'All time falls away, feeling deep and euphoric'
+        mindset: 'Keep the dopamine dripping',
+        optimalState: 'Dopamine drip'
       },
       { 
         time: '5:00-6:00 PM', 
@@ -86,7 +86,7 @@ const templates: DayTemplate[] = [
         time: '7:00-8:20 PM', 
         activity: 'Deep work',
         mindset: 'Dopamine',
-        optimalState: 'Everything falls away, you feel deep and euphoric'
+        optimalState: 'Dri Dopamine'
       },
       { 
         time: '8:20-8:30 PM', 
@@ -110,7 +110,7 @@ const templates: DayTemplate[] = [
         time: '9:10-9:20 PM', 
         activity: 'Nidra',
         mindset: 'Relax',
-        optimalState: 'Each part of my body is ready for rest'
+        optimalState: 'Seretonin drip'
       },
       { 
         time: '9:20-9:30 PM', 

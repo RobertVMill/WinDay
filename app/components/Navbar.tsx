@@ -23,7 +23,8 @@ export default function Navbar() {
     { name: 'Scorecard', href: '/scorecard' },
     { name: 'Perfect Day', href: '/perfect-day' },
     { name: 'Workouts', href: '/workouts' },
-    { name: 'Quotes', href: '/quotes' }
+    { name: 'Quotes', href: '/quotes' },
+    { name: 'Meditation', href: '/meditation' }
   ];
 
   return (
