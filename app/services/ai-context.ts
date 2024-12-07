@@ -1,14 +1,11 @@
+'use client';
+
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
-
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-});
 
 export interface AIContext {
   basePersonality: string;
@@ -128,12 +125,22 @@ export class AIContextManager {
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
-    const response = await openai.embeddings.create({
-      model: "text-embedding-ada-002",
-      input: text,
-    });
+    try {
+      const response = await fetch('/api/ai/embeddings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
 
-    return response.data[0].embedding;
+      if (!response.ok) throw new Error('Failed to generate embedding');
+      const data = await response.json();
+      return data.embedding;
+    } catch (error) {
+      console.error('Error generating embedding:', error);
+      throw error;
+    }
   }
 
   async storeInteraction(
@@ -141,17 +148,21 @@ export class AIContextManager {
     content: string,
     metadata?: any
   ): Promise<void> {
-    const embedding = await this.generateEmbedding(content);
+    try {
+      const embedding = await this.generateEmbedding(content);
 
-    const { error } = await supabase
-      .from('ai_memory')
-      .insert({
-        interaction_type: interactionType,
-        content,
-        metadata,
-        embedding
-      });
+      const { error } = await supabase
+        .from('ai_memory')
+        .insert({
+          interaction_type: interactionType,
+          content,
+          metadata,
+          embedding
+        });
 
-    if (error) throw error;
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error storing interaction:', error);
+    }
   }
 }
