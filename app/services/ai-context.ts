@@ -48,16 +48,16 @@ export class AIContextManager {
     const cached = await this.getFromCache<string>('base_personality');
     if (cached) return cached;
 
-    const { data, error } = await supabase
-      .from('ai_context_templates')
-      .select('base_prompt')
-      .eq('name', 'base_personality')
-      .single();
-
-    if (error) throw error;
-    
-    this.setCache('base_personality', data.base_prompt);
-    return data.base_prompt;
+    try {
+      const response = await fetch('/api/ai/context/personality');
+      if (!response.ok) throw new Error('Failed to fetch base personality');
+      const data = await response.json();
+      this.setCache('base_personality', data.personality);
+      return data.personality;
+    } catch (error) {
+      console.error('Error fetching base personality:', error);
+      return 'I am your personal AI assistant.';
+    }
   }
 
   async getRelevantQuotes(topic: string, limit: number = 3): Promise<any[]> {
@@ -98,23 +98,33 @@ export class AIContextManager {
 
   async assembleContext(
     conversationType: AIContext['conversationType'],
-    currentPageContext?: string
+    currentPath: string
   ): Promise<AIContext> {
-    const [basePersonality, relevantGoals, relevantQuotes, relevantJournalEntries] = 
-      await Promise.all([
-        this.getBasePersonality(),
-        this.getRelevantGoals(),
-        this.getRelevantQuotes(currentPageContext || ''),
-        this.getRelevantJournalEntries(currentPageContext || '')
-      ]);
+    try {
+      const response = await fetch('/api/ai/context', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversationType,
+          currentPath,
+        }),
+      });
 
-    return {
-      basePersonality,
-      relevantGoals,
-      relevantQuotes,
-      relevantJournalEntries,
-      conversationType
-    };
+      if (!response.ok) throw new Error('Failed to fetch AI context');
+      const context = await response.json();
+      return context;
+    } catch (error) {
+      console.error('Error assembling context:', error);
+      return {
+        basePersonality: await this.getBasePersonality(),
+        relevantGoals: await this.getRelevantGoals(),
+        relevantQuotes: await this.getRelevantQuotes(currentPath),
+        relevantJournalEntries: await this.getRelevantJournalEntries(currentPath),
+        conversationType,
+      };
+    }
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
