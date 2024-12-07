@@ -1,13 +1,18 @@
 import OpenAI from 'openai';
-import { NextResponse, Request } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('Missing Supabase environment variables');
+}
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 const createSystemPrompt = async (goalsContext: any) => {
-  const basePrompt = `You are Bert's personal AI assistant, deeply familiar with his philosophy and way of thinking. You embody the spirit of the CEOlympian - the unique combination of a visionary CEO and an Olympian athlete. Your role is to:
+  let contextPrompt = `You are Bert's personal AI assistant, deeply familiar with his philosophy and way of thinking. You embody the spirit of the CEOlympian - the unique combination of a visionary CEO and an Olympian athlete. Your role is to:
 
 1. Help users clarify their goals and break them down into actionable steps
 2. Suggest daily and weekly schedules that align with their goals
@@ -32,15 +37,13 @@ Key Milestone:
 
 This milestone is a top priority and should be considered when making any scheduling or planning suggestions.`;
 
-  let contextPrompt = '';
-  
-  // Fetch relevant quotes
+  // Fetch random quotes
   const { data: quotes } = await supabase
     .from('quotes')
     .select('*')
     .limit(5);
     
-  if (quotes?.length > 0) {
+  if (quotes && quotes.length > 0) {
     contextPrompt += '\n\nBert\'s Wisdom (Selected Quotes):';
     quotes.forEach((quote: any) => {
       contextPrompt += `\n- "${quote.quote}" (${quote.title || 'General'})`;
@@ -68,7 +71,7 @@ This milestone is a top priority and should be considered when making any schedu
     });
   }
 
-  return `${basePrompt}${contextPrompt}\n\nKeep your responses concise, practical, and encouraging. Always consider the user's goals, vision, and especially the 100 subscribers milestone when making scheduling suggestions. Prioritize activities that will help reach the subscriber goal by April 29th, 2025.`;
+  return `${contextPrompt}\n\nKeep your responses concise, practical, and encouraging. Always consider the user's goals, vision, and especially the 100 subscribers milestone when making scheduling suggestions. Prioritize activities that will help reach the subscriber goal by April 29th, 2025.`;
 };
 
 export async function POST(req: Request) {
@@ -78,6 +81,10 @@ export async function POST(req: Request) {
   console.log('Supabase Anon Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   try {
+    if (!process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
+      throw new Error('OpenAI API key is not configured');
+    }
+
     const { messages, goalsContext } = await req.json();
     console.log('Received messages:', messages.length);
 
@@ -91,7 +98,7 @@ export async function POST(req: Request) {
       messages: [
         { 
           role: 'system', 
-          content: 'You are a helpful assistant focused on productivity and goal achievement.' 
+          content: await createSystemPrompt(goalsContext) 
         },
         ...messages
       ],

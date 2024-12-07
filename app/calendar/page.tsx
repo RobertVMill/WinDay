@@ -38,15 +38,23 @@ export default function CalendarPage() {
   const [typingIndicator, setTypingIndicator] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
-  const [vision, setVision] = useState<NorthStarVision | null>(null);
-  const [empireGoals, setEmpireGoals] = useState<EmpireGoal[]>([]);
-  const [dailyActions, setDailyActions] = useState<DailyAction[]>([]);
+  const [vision, setVision] = useState<string | null>(null);
+  const [empireGoals, setEmpireGoals] = useState<any[]>([]);
+  const [dailyActions, setDailyActions] = useState<any[]>([]);
 
   // Cache goals data
-  const goalsCache = useRef({
-    lastFetched: 0,
+  const goalsCache = useRef<{
+    data: {
+      vision: string | null;
+      empireGoals: any[];
+      dailyActions: any[];
+    } | null;
+    lastFetched: number;
+    cacheDuration: number;
+  }>({
     data: null,
-    cacheDuration: 30000 // 30 seconds
+    lastFetched: 0,
+    cacheDuration: 5 * 60 * 1000 // 5 minutes
   });
 
   useEffect(() => {
@@ -57,41 +65,45 @@ export default function CalendarPage() {
   }, [messages]);
 
   const fetchGoalsData = async () => {
-    // Check cache first
-    const now = Date.now();
-    if (goalsCache.current.data && (now - goalsCache.current.lastFetched) < goalsCache.current.cacheDuration) {
-      setVision(goalsCache.current.data.vision);
-      setEmpireGoals(goalsCache.current.data.empireGoals);
-      setDailyActions(goalsCache.current.data.dailyActions);
-      return;
-    }
+    const fetchGoals = async () => {
+      const now = Date.now();
+      if (goalsCache.current.data && (now - goalsCache.current.lastFetched) < goalsCache.current.cacheDuration) {
+        if (goalsCache.current.data) {
+          setVision(goalsCache.current.data.vision);
+          setEmpireGoals(goalsCache.current.data.empireGoals);
+          setDailyActions(goalsCache.current.data.dailyActions);
+        }
+        return;
+      }
 
-    try {
-      const [visionData, empireGoalsData, dailyActionsData] = await Promise.all([
-        supabase.from('north_star_vision').select('*').eq('is_active', true).maybeSingle(),
-        supabase.from('empire_goals').select('*').order('created_at', { ascending: true }),
-        supabase.from('daily_actions').select('*').order('created_at', { ascending: true })
-      ]);
+      try {
+        const [visionData, empireGoalsData, dailyActionsData] = await Promise.all([
+          supabase.from('north_star_vision').select('*').eq('is_active', true).maybeSingle(),
+          supabase.from('empire_goals').select('*').order('created_at', { ascending: true }),
+          supabase.from('daily_actions').select('*').order('created_at', { ascending: true })
+        ]);
 
-      const goalsData = {
-        vision: visionData,
-        empireGoals: empireGoalsData || [],
-        dailyActions: dailyActionsData || []
-      };
+        const goalsData = {
+          vision: visionData?.data?.content || null,
+          empireGoals: empireGoalsData?.data || [],
+          dailyActions: dailyActionsData?.data || []
+        };
 
-      // Update cache
-      goalsCache.current = {
-        ...goalsCache.current,
-        lastFetched: now,
-        data: goalsData
-      };
+        // Update cache
+        goalsCache.current = {
+          ...goalsCache.current,
+          lastFetched: now,
+          data: goalsData
+        };
 
-      setVision(goalsData.vision);
-      setEmpireGoals(goalsData.empireGoals);
-      setDailyActions(goalsData.dailyActions);
-    } catch (error) {
-      console.error('Error fetching goals data:', error);
-    }
+        setVision(goalsData.vision);
+        setEmpireGoals(goalsData.empireGoals);
+        setDailyActions(goalsData.dailyActions);
+      } catch (error) {
+        console.error('Error fetching goals data:', error);
+      }
+    };
+    await fetchGoals();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
