@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -88,128 +88,213 @@ function StrategySection({ strategy, checks, onToggle }: {
 
 function PreviousEntries({ onEntryClick }: { onEntryClick: (entry: JournalEntry) => void }) {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const observer = useRef<IntersectionObserver>();
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const lastDragX = useRef(0);
+  const [timelineZoom, setTimelineZoom] = useState(100);
+  const [timelinePan, setTimelinePan] = useState(0);
 
-  const fetchEntries = useCallback(async (startIndex: number) => {
-    if (!hasMore || isLoading) return;
+  const fetchEntries = useCallback(async () => {
+    if (isLoading) return;
     
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('journal_entries')
         .select('*')
-        .order('date', { ascending: false })
-        .range(startIndex, startIndex + 9);
+        .order('date', { ascending: true });
 
       if (error) throw error;
 
       if (data) {
-        if (data.length < 10) {
-          setHasMore(false);
-        }
-        if (startIndex === 0) {
-          setEntries(data);
-        } else {
-          setEntries(prev => [...prev, ...data]);
-        }
+        setEntries(data);
       }
     } catch (error) {
       console.error('Error fetching entries:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [hasMore, isLoading]);
-
-  const lastEntryRef = useCallback((node: HTMLDivElement) => {
-    if (isLoading) return;
-    
-    if (observer.current) observer.current.disconnect();
-    
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        fetchEntries(entries.length);
-      }
-    });
-    
-    if (node) observer.current.observe(node);
-  }, [isLoading, hasMore, fetchEntries]);
+  }, [isLoading]);
 
   useEffect(() => {
-    fetchEntries(0);
-    return () => {
-      if (observer.current) {
-        observer.current.disconnect();
-      }
-    };
+    fetchEntries();
   }, [fetchEntries]);
 
+  // Generate month/year markers
+  const months = useMemo(() => {
+    if (entries.length === 0) return [];
+
+    const firstDate = new Date(entries[0].date);
+    const lastDate = new Date(entries[entries.length - 1].date);
+    const timeRange = lastDate.getTime() - firstDate.getTime();
+    const markers: { date: Date; position: number }[] = [];
+
+    let currentDate = new Date(firstDate);
+    while (currentDate <= lastDate) {
+      const position = 15 + ((currentDate.getTime() - firstDate.getTime()) / timeRange) * 80;
+      markers.push({
+        date: new Date(currentDate),
+        position
+      });
+      currentDate = new Date(currentDate.setMonth(currentDate.getMonth() + 1));
+    }
+
+    return markers;
+  }, [entries]);
+
   return (
-    <div className="mb-8 font-spaceGrotesk">
-      <div 
-        onClick={() => setIsVisible(!isVisible)}
-        className="flex items-center justify-between cursor-pointer hover:bg-gray-800/50 p-2 rounded-lg transition-colors"
-      >
-        <h2 className="text-xl font-bold text-white mb-0">Previous Entries</h2>
-        <svg 
-          className={`w-5 h-5 text-gray-400 transform transition-transform ${isVisible ? 'rotate-180' : ''}`} 
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+    <div className="mt-12 font-spaceGrotesk">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-white">Journey Timeline</h2>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setTimelineZoom(prev => Math.max(50, prev - 10))}
+            className="p-2 text-gray-400 hover:text-white transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+            </svg>
+          </button>
+          <span className="text-sm text-gray-400">{timelineZoom}%</span>
+          <button
+            onClick={() => setTimelineZoom(prev => Math.min(200, prev + 10))}
+            className="p-2 text-gray-400 hover:text-white transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
       </div>
-      
-      {isVisible && (
-        <div className="grid grid-cols-1 gap-3 mt-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-          {entries.map((entry, index) => (
-            <div
-              key={entry.id}
-              ref={index === entries.length - 1 ? lastEntryRef : undefined}
-              onClick={() => onEntryClick(entry)}
-              className="bg-gray-800/50 p-3 rounded-lg cursor-pointer hover:bg-gray-700/50 transition-colors border border-gray-700/50"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <p className="text-white/90 text-sm font-medium">
-                    {new Date(entry.date).toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
-                  </p>
-                  <p className="text-gray-400 text-xs mt-1 line-clamp-2">{entry.gratitude}</p>
-                </div>
-                {entry.image_url && (
-                  <div className="w-12 h-12 ml-3 flex-shrink-0 relative">
-                    <Image
-                      src={entry.image_url}
-                      alt="Journal entry"
-                      fill
-                      className="object-cover rounded-md"
-                    />
+
+      <div className="bg-gray-800/50 rounded-lg p-8">
+        <div className="overflow-x-auto">
+          <div
+            ref={timelineRef}
+            className="relative cursor-grab active:cursor-grabbing"
+            style={{ 
+              minWidth: '800px', 
+              width: `${timelineZoom}%`,
+              height: '250px',
+              transform: `translateX(${timelinePan}px)`,
+              transition: isDragging.current ? 'none' : 'transform 0.1s ease-out'
+            }}
+            onWheel={(e: React.WheelEvent) => {
+              if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                const delta = e.deltaY * -0.5;
+                setTimelineZoom(prev => Math.min(Math.max(50, prev + delta), 200));
+              }
+            }}
+            onMouseDown={(e: React.MouseEvent) => {
+              isDragging.current = true;
+              lastDragX.current = e.clientX;
+            }}
+            onMouseMove={(e: React.MouseEvent) => {
+              if (isDragging.current) {
+                const delta = e.clientX - lastDragX.current;
+                setTimelinePan(prev => prev + delta);
+                lastDragX.current = e.clientX;
+              }
+            }}
+            onMouseUp={() => {
+              isDragging.current = false;
+            }}
+            onMouseLeave={() => {
+              isDragging.current = false;
+            }}
+          >
+            {/* Timeline line */}
+            <div className="absolute top-8 left-0 right-0 h-0.5 bg-gray-700"></div>
+
+            {/* Today marker */}
+            {entries.length > 0 && (
+              <div 
+                className="absolute top-0 bottom-0" 
+                style={{ 
+                  left: `${15 + ((new Date().getTime() - new Date(entries[0].date).getTime()) / 
+                    (new Date(entries[entries.length - 1].date).getTime() - new Date(entries[0].date).getTime())) * 80}%`,
+                  transform: 'translateX(-50%)'
+                }}
+              >
+                <div className="absolute top-6 w-0.5 h-full bg-red-500 opacity-20"></div>
+                <div className="absolute top-4 -translate-x-1/2">
+                  <div className="px-2 py-1 bg-red-500 text-white text-xs font-medium rounded-full">
+                    Today
                   </div>
-                )}
+                </div>
+                <div className="absolute top-8 -translate-x-1/2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+                  <div className="w-3 h-3 bg-red-500 rounded-full absolute top-0"></div>
+                </div>
               </div>
+            )}
+
+            {/* Month/Year markers */}
+            <div className="absolute bottom-0 left-0 right-0 h-8">
+              {months.map((month, index) => (
+                <div
+                  key={month.date.toISOString()}
+                  className="absolute transform -translate-x-1/2"
+                  style={{ left: `${month.position}%` }}
+                >
+                  <div className="h-3 w-px bg-gray-600"></div>
+                  <div className="mt-1 text-xs text-gray-400 whitespace-nowrap">
+                    {month.date.toLocaleDateString('en-US', { 
+                      month: 'short',
+                      year: month.date.getMonth() === 0 || index === 0 ? 'numeric' : undefined 
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-center py-4">
-              <div className="animate-pulse flex space-x-4">
-                <div className="h-2 w-2 bg-gray-500 rounded-full"></div>
-                <div className="h-2 w-2 bg-gray-500 rounded-full"></div>
-                <div className="h-2 w-2 bg-gray-500 rounded-full"></div>
-              </div>
+
+            {/* Journal entries */}
+            <div className="relative">
+              {entries.map((entry, index) => {
+                const position = entries.length <= 1 ? 50 : 
+                  15 + ((new Date(entry.date).getTime() - new Date(entries[0].date).getTime()) / 
+                    (new Date(entries[entries.length - 1].date).getTime() - new Date(entries[0].date).getTime())) * 80;
+
+                return (
+                  <div
+                    key={entry.id}
+                    className="absolute transform -translate-x-1/2"
+                    style={{ 
+                      left: `${position}%`,
+                      top: index % 2 === 0 ? '20px' : '100px'
+                    }}
+                  >
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mb-2 mx-auto"></div>
+                    <div
+                      onClick={() => onEntryClick(entry)}
+                      className="w-48 bg-gray-800 p-3 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors border border-gray-700"
+                    >
+                      <p className="text-white/90 text-sm font-medium">
+                        {new Date(entry.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </p>
+                      <p className="text-gray-400 text-xs mt-1 line-clamp-2">{entry.gratitude}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
-          {!hasMore && entries.length > 0 && (
-            <div className="text-center text-gray-500 text-sm py-2">
-              No more entries to load
-            </div>
-          )}
+          </div>
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="flex justify-center py-4">
+          <div className="animate-pulse flex space-x-4">
+            <div className="h-3 w-3 bg-gray-700 rounded-full"></div>
+            <div className="h-3 w-3 bg-gray-700 rounded-full"></div>
+            <div className="h-3 w-3 bg-gray-700 rounded-full"></div>
+          </div>
         </div>
       )}
     </div>
@@ -287,206 +372,205 @@ function EntryDetail({ entry, onClose }: { entry: JournalEntry; onClose: () => v
 }
 
 export default function JournalPage() {
-  const router = useRouter();
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [gratitude, setGratitude] = useState('');
-  const [gifts, setGifts] = useState('');
-  const [strategy, setStrategy] = useState(DEFAULT_STRATEGY);
-  const [strategyChecks, setStrategyChecks] = useState<Record<string, boolean>>({});
-  const [bestDay, setBestDay] = useState('');
-  const [workoutNotes, setWorkoutNotes] = useState('');
-  const [workoutCategory, setWorkoutCategory] = useState('');
-  const [deepFlowActivity, setDeepFlowActivity] = useState('');
+  const [entry, setEntry] = useState<Partial<JournalEntry>>({
+    gratitude: '',
+    gifts: '',
+    strategy: DEFAULT_STRATEGY,
+    best_day: '',
+    workout_notes: '',
+    workout_category: '',
+    deep_flow_activity: '',
+    strategy_checks: {},
+  });
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase
+      // Save to journal entries
+      const { data, error } = await supabase
         .from('journal_entries')
-        .insert([
-          {
-            date,
-            gratitude,
-            gifts,
-            strategy,
-            strategy_checks: strategyChecks,
-            best_day: bestDay,
-            workout_notes: workoutNotes,
-            workout_category: workoutCategory,
-            deep_flow_activity: deepFlowActivity,
-          },
-        ])
+        .insert([{
+          ...entry,
+          date: new Date().toISOString(),
+        }])
         .select()
         .single();
 
       if (error) throw error;
 
-      // Reset form
-      setGratitude('');
-      setGifts('');
-      setStrategy(DEFAULT_STRATEGY);
-      setStrategyChecks({});
-      setBestDay('');
-      setWorkoutNotes('');
-      setWorkoutCategory('');
-      setDeepFlowActivity('');
-      
+      // Save to scorecard
+      const { error: scorecardError } = await supabase
+        .from('scorecards')
+        .insert([
+          {
+            date: new Date().toISOString(),
+            journal_entry_id: data.id,
+            mood_score: 0,
+            energy_score: 0,
+            notes: entry.gratitude
+          }
+        ]);
+
+      if (scorecardError) throw scorecardError;
+
+      setEntry({
+        gratitude: '',
+        gifts: '',
+        strategy: DEFAULT_STRATEGY,
+        best_day: '',
+        workout_notes: '',
+        workout_category: '',
+        deep_flow_activity: '',
+        strategy_checks: {},
+      });
+
+      setShowNotification(true);
       router.refresh();
     } catch (error) {
-      console.error('Error inserting entry:', error);
+      console.error('Error saving journal entry:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleEntryClick = (entry: JournalEntry) => {
-    setSelectedEntry(entry);
-    setStrategyChecks(entry.strategy_checks || {});
+  const handleStrategyCheck = (item: string, checked: boolean) => {
+    setEntry(prev => ({
+      ...prev,
+      strategy_checks: {
+        ...prev.strategy_checks,
+        [item]: checked,
+      },
+    }));
   };
 
-  const handleStrategyToggle = async (item: string, checked: boolean) => {
-    const newChecks = { ...strategyChecks, [item]: checked };
-    setStrategyChecks(newChecks);
-
-    if (selectedEntry) {
-      try {
-        const { error } = await supabase
-          .from('journal_entries')
-          .update({ strategy_checks: newChecks })
-          .eq('id', selectedEntry.id);
-
-        if (error) throw error;
-      } catch (error) {
-        console.error('Error updating strategy checks:', error);
-      }
+  useEffect(() => {
+    if (showNotification) {
+      const timer = setTimeout(() => {
+        setShowNotification(false);
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [showNotification]);
 
   return (
-    <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <PreviousEntries onEntryClick={handleEntryClick} />
-        {selectedEntry && (
-          <EntryDetail entry={selectedEntry} onClose={() => setSelectedEntry(null)} />
+    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 font-spaceGrotesk">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white">Journal</h1>
+          <p className="text-gray-300 mt-2">Record your journey, celebrate your wins, and stay aligned with your goals.</p>
+        </div>
+
+        {showNotification && (
+          <div className="fixed top-4 right-4 bg-green-500 text-white px-4 sm:px-6 py-3 rounded-lg shadow-lg transform transition-all duration-500 ease-in-out animate-fade-in z-50">
+            <div className="flex items-center space-x-2">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Journal entry saved!</span>
+            </div>
+          </div>
         )}
-        <form onSubmit={handleSubmit} className="space-y-6 bg-gray-800 p-8 rounded-lg shadow">
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Date
-            </label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            />
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              What are you grateful for today?
-            </label>
-            <textarea
-              value={gratitude}
-              onChange={(e) => setGratitude(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              rows={3}
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="space-y-6">
+              <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Today's Gratitude
+                </label>
+                <textarea
+                  value={entry.gratitude}
+                  onChange={(e) => setEntry({ ...entry, gratitude: e.target.value })}
+                  className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="What are you grateful for today?"
+                />
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              What are your gifts to share with the world?
-            </label>
-            <textarea
-              value={gifts}
-              onChange={(e) => setGifts(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              rows={3}
-              placeholder="What unique talents, insights, or contributions can you offer to make the world better?"
-            />
-          </div>
+              <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Today's Gifts
+                </label>
+                <textarea
+                  value={entry.gifts}
+                  onChange={(e) => setEntry({ ...entry, gifts: e.target.value })}
+                  className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="What gifts did you receive or give today?"
+                />
+              </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Strategy
-            </label>
-            {selectedEntry ? (
-              <StrategySection 
-                strategy={selectedEntry.strategy} 
-                checks={strategyChecks}
-                onToggle={handleStrategyToggle}
-              />
-            ) : (
-              <StrategySection 
-                strategy={strategy} 
-                checks={strategyChecks}
-                onToggle={handleStrategyToggle}
-              />
-            )}
-          </div>
+              <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Deep Flow Activity
+                </label>
+                <textarea
+                  value={entry.deep_flow_activity}
+                  onChange={(e) => setEntry({ ...entry, deep_flow_activity: e.target.value })}
+                  className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="What activity got you into deep flow today?"
+                />
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Workout Category
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {['Upper Strength', 'Lower Strength', 'Endurance'].map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={() => setWorkoutCategory(category)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-                    workoutCategory === category
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
+            <div className="space-y-6">
+              <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Today's Strategy Checklist
+                </label>
+                <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
+                  <StrategySection 
+                    strategy={entry.strategy || DEFAULT_STRATEGY}
+                    checks={entry.strategy_checks}
+                    onToggle={handleStrategyCheck}
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Workout Notes
+                </label>
+                <textarea
+                  value={entry.workout_notes}
+                  onChange={(e) => setEntry({ ...entry, workout_notes: e.target.value })}
+                  className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="How was your workout today?"
+                />
+              </div>
+
+              <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Make Today Your Best Day
+                </label>
+                <textarea
+                  value={entry.best_day}
+                  onChange={(e) => setEntry({ ...entry, best_day: e.target.value })}
+                  className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="What would make today your absolute best day?"
+                />
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              Workout Notes from Yesterday
-            </label>
-            <textarea
-              value={workoutNotes}
-              onChange={(e) => setWorkoutNotes(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              rows={3}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300">
-              What is my Deep Flow Activity today?
-            </label>
-            <textarea
-              value={deepFlowActivity}
-              onChange={(e) => setDeepFlowActivity(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              rows={3}
-              placeholder="What activity will put you in a state of deep focus and flow?"
-            />
-          </div>
-
-          <div>
+          <div className="mt-8">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+              className={`w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-lg transform transition-all duration-200 ${
+                isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
+              }`}
             >
               {isSubmitting ? 'Saving...' : 'Save Entry'}
             </button>
           </div>
         </form>
+
+        <PreviousEntries onEntryClick={setSelectedEntry} />
       </div>
     </div>
   );

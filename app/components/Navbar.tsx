@@ -18,6 +18,7 @@ export default function Navbar() {
 
   const navigation = [
     { name: 'Goals', href: '/goals' },
+    { name: 'Calendar', href: '/calendar' },
     { name: 'Journal', href: '/journal' },
     { name: 'Scorecard', href: '/scorecard' },
     { name: 'Perfect Day', href: '/perfect-day' },

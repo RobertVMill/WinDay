@@ -25,6 +25,10 @@ interface ScoreData {
   no_youtube: boolean;
   no_rap: boolean;
   nidra: boolean;
+  journal_entry_id?: string;
+  mood_score?: number;
+  energy_score?: number;
+  notes?: string;
 }
 
 const calculateTotalScore = (score: ScoreData) => {
@@ -89,7 +93,10 @@ export default function ScoreCard() {
     no_p: false,
     no_youtube: false,
     no_rap: false,
-    nidra: false
+    nidra: false,
+    mood_score: 0,
+    energy_score: 0,
+    notes: ''
   });
 
   const [totalScore, setTotalScore] = useState(0);
@@ -168,79 +175,134 @@ export default function ScoreCard() {
   };
 
   return (
-    <div>
-      <ScoreChart scores={previousScores} />
-
-      <h1>Today&apos;s Scorecard</h1>
-      <main className="min-h-screen p-8 max-w-2xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center">Daily Score Card</h1>
+    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-8 text-center text-white">Daily Score Card</h1>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label htmlFor="date" className="block text-sm font-medium">
-              Date
-            </label>
-            <input
-              type="date"
-              id="date"
-              name="date"
-              value={formData.date}
-              onChange={handleChange}
-              className="w-full p-2 border rounded-md bg-white/5"
-              required
-            />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-gray-800 p-4 sm:p-6 rounded-lg">
+            <ScoreChart scores={previousScores} />
           </div>
-
-          <div className="space-y-2">
-            <label htmlFor="sleep_performance" className="block text-sm font-medium">
-              Sleep Performance (0-100%)
-            </label>
-            <input
-              type="number"
-              id="sleep_performance"
-              name="sleep_performance"
-              min="0"
-              max="100"
-              value={formData.sleep_performance}
-              onChange={handleChange}
-              className="w-full p-2 border rounded-md bg-white/5"
-              required
-            />
+          
+          <div className="bg-gray-800 p-4 sm:p-6 rounded-lg">
+            <h2 className="text-2xl font-semibold mb-4 text-white">Previous Entries</h2>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-700">
+              {previousScores.map((score, index) => (
+                <div key={index} className="bg-gray-700 p-4 rounded-lg hover:bg-gray-650 transition-colors">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
+                    <span className="font-medium text-gray-200">{new Date(score.date).toLocaleDateString()}</span>
+                    <span className="text-xl font-bold text-blue-400 mt-2 sm:mt-0">Score: {calculateTotalScore(score)}</span>
+                  </div>
+                  {score.notes && (
+                    <div className="mt-2 text-gray-300">
+                      <p className="font-medium text-white">Journal Entry:</p>
+                      <p className="mt-1 text-gray-300">{score.notes}</p>
+                    </div>
+                  )}
+                  {(score.mood_score !== undefined || score.energy_score !== undefined) && (
+                    <div className="mt-2 flex flex-wrap gap-4">
+                      {score.mood_score !== undefined && (
+                        <div className="bg-gray-800 px-3 py-1.5 rounded-full">
+                          <span className="font-medium text-gray-300">Mood: </span>
+                          <span className="text-lg">{score.mood_score > 0 ? '😊' : score.mood_score < 0 ? '😔' : '😐'}</span>
+                        </div>
+                      )}
+                      {score.energy_score !== undefined && (
+                        <div className="bg-gray-800 px-3 py-1.5 rounded-full">
+                          <span className="font-medium text-gray-300">Energy: </span>
+                          <span className="text-lg">{score.energy_score > 0 ? '⚡' : score.energy_score < 0 ? '🔋' : '📊'}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="minutes_read" className="block text-sm font-medium">
-                Minutes Read
+        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6 bg-gray-800 p-4 sm:p-6 rounded-lg">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="date" className="block text-sm font-medium text-gray-300 mb-1">
+                Date
               </label>
               <input
-                type="number"
-                id="minutes_read"
-                name="minutes_read"
-                min="0"
-                value={formData.minutes_read}
+                type="date"
+                id="date"
+                name="date"
+                value={formData.date}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md bg-white/5"
+                className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
               />
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="github_commits" className="block text-sm font-medium">
-                GitHub Commits
+            <div>
+              <label htmlFor="sleep_performance" className="block text-sm font-medium text-gray-300 mb-1">
+                Sleep Performance (0-100%)
               </label>
               <input
                 type="number"
-                id="github_commits"
-                name="github_commits"
-                min="0"
-                value={formData.github_commits}
+                id="sleep_performance"
+                name="sleep_performance"
+                value={formData.sleep_performance}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md bg-white/5"
+                min="0"
+                max="100"
+                className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="mood_score" className="block text-sm font-medium text-gray-300 mb-1">
+                  Mood Score (-5 to 5)
+                </label>
+                <input
+                  type="number"
+                  id="mood_score"
+                  name="mood_score"
+                  min="-5"
+                  max="5"
+                  value={formData.mood_score}
+                  onChange={handleChange}
+                  className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="energy_score" className="block text-sm font-medium text-gray-300 mb-1">
+                  Energy Score (-5 to 5)
+                </label>
+                <input
+                  type="number"
+                  id="energy_score"
+                  name="energy_score"
+                  min="-5"
+                  max="5"
+                  value={formData.energy_score}
+                  onChange={handleChange}
+                  className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-300 mb-1">
+                Notes
+              </label>
+              <textarea
+                id="notes"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                className="w-full h-32 p-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -250,7 +312,7 @@ export default function ScoreCard() {
                 onChange={handleChange}
                 className="h-4 w-4 rounded border-gray-300"
               />
-              <label htmlFor="fast_until_noon" className="ml-2 block text-sm">
+              <label htmlFor="fast_until_noon" className="ml-2 block text-sm text-gray-300">
                 Fast until noon
               </label>
             </div>
@@ -264,7 +326,7 @@ export default function ScoreCard() {
                 onChange={handleChange}
                 className="h-4 w-4 rounded border-gray-300"
               />
-              <label htmlFor="no_p" className="ml-2 block text-sm">
+              <label htmlFor="no_p" className="ml-2 block text-sm text-gray-300">
                 No P
               </label>
             </div>
@@ -278,7 +340,7 @@ export default function ScoreCard() {
                 onChange={handleChange}
                 className="h-4 w-4 rounded border-gray-300"
               />
-              <label htmlFor="no_youtube" className="ml-2 block text-sm">
+              <label htmlFor="no_youtube" className="ml-2 block text-sm text-gray-300">
                 No YouTube
               </label>
             </div>
@@ -292,7 +354,7 @@ export default function ScoreCard() {
                 onChange={handleChange}
                 className="h-4 w-4 rounded border-gray-300"
               />
-              <label htmlFor="no_rap" className="ml-2 block text-sm">
+              <label htmlFor="no_rap" className="ml-2 block text-sm text-gray-300">
                 No Rap
               </label>
             </div>
@@ -306,7 +368,7 @@ export default function ScoreCard() {
                 onChange={handleChange}
                 className="h-4 w-4 rounded border-gray-300"
               />
-              <label htmlFor="nidra" className="ml-2 block text-sm">
+              <label htmlFor="nidra" className="ml-2 block text-sm text-gray-300">
                 Nidra
               </label>
             </div>
@@ -332,7 +394,7 @@ export default function ScoreCard() {
             {saving ? `Saving...` : `Save Score`}
           </button>
         </form>
-      </main>
+      </div>
     </div>
   );
 }

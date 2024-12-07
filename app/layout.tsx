@@ -32,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable}`}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-900`}>
+    <html lang="en" className={`${spaceGrotesk.variable} ${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`font-space-grotesk antialiased bg-gray-900`}>
         <Navbar />
         {children}
       </body>

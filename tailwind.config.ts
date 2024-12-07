@@ -13,7 +13,9 @@ export default {
         foreground: "var(--foreground)",
       },
       fontFamily: {
-        spaceGrotesk: ['var(--font-space-grotesk)', 'sans-serif'],
+        'space-grotesk': ['var(--font-space-grotesk)', 'sans-serif'],
+        'sans': ['var(--font-space-grotesk)', 'sans-serif'],
+        'mono': ['var(--font-geist-mono)', 'monospace'],
       },
     },
   },
