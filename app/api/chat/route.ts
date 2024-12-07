@@ -1,15 +1,6 @@
 import OpenAI from 'openai';
-import { createClient } from '@supabase/supabase-js';
 import type { AIContext } from '@/app/services/ai-context';
-
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
+import { supabase } from '@/app/utils/db';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '', // Allow empty string during build
