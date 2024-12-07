@@ -69,15 +69,43 @@ const ScoreChart = ({ scores }: { scores: ScoreData[] }) => {
 
   const options = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'top' as const,
+        labels: {
+          boxWidth: 10,
+          font: {
+            size: 12
+          }
+        }
       },
       title: {
         display: true,
         text: 'Score History',
+        font: {
+          size: 14
+        }
       },
     },
+    scales: {
+      x: {
+        ticks: {
+          maxRotation: 45,
+          minRotation: 45,
+          font: {
+            size: 10
+          }
+        }
+      },
+      y: {
+        ticks: {
+          font: {
+            size: 10
+          }
+        }
+      }
+    }
   };
 
   return <Line data={data} options={options} />;
