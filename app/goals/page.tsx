@@ -338,7 +338,7 @@ export default function GoalsPage() {
     };
 
     return (
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+      <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow">
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -404,7 +404,7 @@ export default function GoalsPage() {
     const handleSubmit = isVisionForm ? handleVisionSubmit : handleBhagSubmit;
 
     return (
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+      <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow">
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -469,7 +469,7 @@ export default function GoalsPage() {
 
   function renderMilestoneForm() {
     return (
-      <form onSubmit={handleMilestoneSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow mt-4">
+      <form onSubmit={handleMilestoneSubmit} className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow mt-4">
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -557,7 +557,7 @@ export default function GoalsPage() {
     }
 
     return (
-      <div className="mb-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow overflow-x-auto">
+      <div className="mb-8 bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow overflow-x-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Timeline</h2>
           <div className="flex items-center gap-4">
@@ -960,7 +960,7 @@ export default function GoalsPage() {
         </div>
 
         {vision && !editingVision && (
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow">
             <p className="text-gray-900 dark:text-white mb-4">{vision.content}</p>
             {vision.target_date && (
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
@@ -1005,7 +1005,7 @@ export default function GoalsPage() {
               {editingBhagId === bhag.id ? (
                 renderEditForm('bhag')
               ) : (
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg shadow">
                   <p className="text-gray-900 dark:text-white mb-4">{bhag.content}</p>
                   {bhag.target_date && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
