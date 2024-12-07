@@ -11,6 +11,14 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error('Missing OpenAI API key');
+}
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
 function createSystemMessage(context: AIContext): string {
   let systemPrompt = context.basePersonality;
 
@@ -50,15 +58,7 @@ function createSystemMessage(context: AIContext): string {
 
 export async function POST(req: Request) {
   try {
-    if (!process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
-      throw new Error('OpenAI API key is not configured');
-    }
-
     const { messages, context } = await req.json();
-
-    const openai = new OpenAI({
-      apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-    });
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
