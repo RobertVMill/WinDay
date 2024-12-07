@@ -384,7 +384,6 @@ export default function JournalPage() {
   });
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showNotification, setShowNotification] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -430,7 +429,6 @@ export default function JournalPage() {
         strategy_checks: {},
       });
 
-      setShowNotification(true);
       router.refresh();
     } catch (error) {
       console.error('Error saving journal entry:', error);
@@ -449,14 +447,9 @@ export default function JournalPage() {
     }));
   };
 
-  useEffect(() => {
-    if (showNotification) {
-      const timer = setTimeout(() => {
-        setShowNotification(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showNotification]);
+  const handleEntryChange = (field: keyof JournalEntry, value: string) => {
+    setEntry(prev => ({ ...prev, [field]: value }));
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 font-spaceGrotesk">
@@ -466,27 +459,16 @@ export default function JournalPage() {
           <p className="text-gray-300 mt-2">Record your journey, celebrate your wins, and stay aligned with your goals.</p>
         </div>
 
-        {showNotification && (
-          <div className="fixed top-4 right-4 bg-green-500 text-white px-4 sm:px-6 py-3 rounded-lg shadow-lg transform transition-all duration-500 ease-in-out animate-fade-in z-50">
-            <div className="flex items-center space-x-2">
-              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-              <span>Journal entry saved!</span>
-            </div>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-6">
               <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Today's Gratitude
+                  Today&apos;s Gratitude
                 </label>
                 <textarea
                   value={entry.gratitude}
-                  onChange={(e) => setEntry({ ...entry, gratitude: e.target.value })}
+                  onChange={(e) => handleEntryChange('gratitude', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="What are you grateful for today?"
                 />
@@ -494,11 +476,11 @@ export default function JournalPage() {
 
               <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Today's Gifts
+                  Today&apos;s Gifts
                 </label>
                 <textarea
                   value={entry.gifts}
-                  onChange={(e) => setEntry({ ...entry, gifts: e.target.value })}
+                  onChange={(e) => handleEntryChange('gifts', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="What gifts did you receive or give today?"
                 />
@@ -510,7 +492,7 @@ export default function JournalPage() {
                 </label>
                 <textarea
                   value={entry.deep_flow_activity}
-                  onChange={(e) => setEntry({ ...entry, deep_flow_activity: e.target.value })}
+                  onChange={(e) => handleEntryChange('deep_flow_activity', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="What activity got you into deep flow today?"
                 />
@@ -520,7 +502,7 @@ export default function JournalPage() {
             <div className="space-y-6">
               <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Today's Strategy Checklist
+                  Today&apos;s Strategy Checklist
                 </label>
                 <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
                   <StrategySection 
@@ -537,7 +519,7 @@ export default function JournalPage() {
                 </label>
                 <textarea
                   value={entry.workout_notes}
-                  onChange={(e) => setEntry({ ...entry, workout_notes: e.target.value })}
+                  onChange={(e) => handleEntryChange('workout_notes', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="How was your workout today?"
                 />
@@ -549,7 +531,7 @@ export default function JournalPage() {
                 </label>
                 <textarea
                   value={entry.best_day}
-                  onChange={(e) => setEntry({ ...entry, best_day: e.target.value })}
+                  onChange={(e) => handleEntryChange('best_day', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="What would make today your absolute best day?"
                 />
