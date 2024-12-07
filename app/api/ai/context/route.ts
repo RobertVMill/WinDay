@@ -12,7 +12,13 @@ export async function POST(request: Request) {
       .eq('name', 'base_personality')
       .single();
 
-    if (personalityError) throw personalityError;
+    if (personalityError) {
+      console.error('Error fetching personality:', personalityError);
+      return NextResponse.json(
+        { error: 'Failed to fetch personality data' },
+        { status: 500 }
+      );
+    }
 
     // Get relevant goals
     const { data: goalsData, error: goalsError } = await supabase
@@ -20,7 +26,13 @@ export async function POST(request: Request) {
       .select('*')
       .limit(5);
 
-    if (goalsError) throw goalsError;
+    if (goalsError) {
+      console.error('Error fetching goals:', goalsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch goals data' },
+        { status: 500 }
+      );
+    }
 
     // Get relevant quotes
     const { data: quotesData, error: quotesError } = await supabase
@@ -28,7 +40,13 @@ export async function POST(request: Request) {
       .select('*')
       .limit(3);
 
-    if (quotesError) throw quotesError;
+    if (quotesError) {
+      console.error('Error fetching quotes:', quotesError);
+      return NextResponse.json(
+        { error: 'Failed to fetch quotes data' },
+        { status: 500 }
+      );
+    }
 
     // Get relevant journal entries
     const { data: journalData, error: journalError } = await supabase
@@ -37,13 +55,19 @@ export async function POST(request: Request) {
       .order('created_at', { ascending: false })
       .limit(3);
 
-    if (journalError) throw journalError;
+    if (journalError) {
+      console.error('Error fetching journal entries:', journalError);
+      return NextResponse.json(
+        { error: 'Failed to fetch journal data' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
-      basePersonality: personalityData.base_prompt,
-      relevantGoals: goalsData,
-      relevantQuotes: quotesData,
-      relevantJournalEntries: journalData,
+      basePersonality: personalityData?.base_prompt || 'I am your personal AI assistant.',
+      relevantGoals: goalsData || [],
+      relevantQuotes: quotesData || [],
+      relevantJournalEntries: journalData || [],
       conversationType,
     });
   } catch (error) {

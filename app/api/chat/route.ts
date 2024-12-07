@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { AIContext } from '@/app/services/ai-context';
 import { supabase } from '@/app/utils/db';
+import { NextResponse } from 'next/server';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '', // Allow empty string during build
@@ -46,13 +47,20 @@ function createSystemMessage(context: AIContext): string {
 export async function POST(req: Request) {
   try {
     if (!process.env.OPENAI_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: 'OpenAI API key is not configured' }),
+      return NextResponse.json(
+        { error: 'OpenAI API key is not configured' },
         { status: 500 }
       );
     }
 
     const { messages, context } = await req.json();
+
+    if (!messages || !Array.isArray(messages)) {
+      return NextResponse.json(
+        { error: 'Invalid messages format' },
+        { status: 400 }
+      );
+    }
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
@@ -66,20 +74,23 @@ export async function POST(req: Request) {
       temperature: 0.7,
     });
 
-    return new Response(JSON.stringify(completion.choices[0].message), {
-      headers: { 'Content-Type': 'application/json' }
+    return NextResponse.json({
+      message: completion.choices[0].message,
     });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('Chat API error:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Failed to process request', 
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
+    
+    // Handle rate limit errors specifically
+    if (error?.code === 'rate_limit_exceeded') {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again in a few minutes.' },
+        { status: 429 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to process request' },
+      { status: 500 }
     );
   }
 }

@@ -9,13 +9,21 @@ export async function GET() {
       .eq('name', 'base_personality')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching base personality:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch base personality' },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json({ personality: data.base_prompt });
+    return NextResponse.json({
+      basePersonality: data?.base_prompt || 'I am your personal AI assistant.',
+    });
   } catch (error) {
-    console.error('Error fetching personality:', error);
+    console.error('Error in personality API:', error);
     return NextResponse.json(
-      { personality: 'I am your personal AI assistant.' },
+      { error: 'Failed to fetch base personality' },
       { status: 500 }
     );
   }
