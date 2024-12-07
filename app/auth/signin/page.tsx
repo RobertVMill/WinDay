@@ -15,7 +15,7 @@ export default function SignIn() {
       // Store authentication in localStorage and cookies
       localStorage.setItem('isAuthenticated', 'true');
       document.cookie = 'isAuthenticated=true; path=/';
-      router.push('/app');
+      router.push('/goals');
     } else {
       setError('Incorrect password');
     }
