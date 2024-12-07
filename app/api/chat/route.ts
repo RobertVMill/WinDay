@@ -11,12 +11,8 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('Missing OpenAI API key');
-}
-
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || '', // Allow empty string during build
 });
 
 function createSystemMessage(context: AIContext): string {
@@ -58,6 +54,13 @@ function createSystemMessage(context: AIContext): string {
 
 export async function POST(req: Request) {
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key is not configured' }),
+        { status: 500 }
+      );
+    }
+
     const { messages, context } = await req.json();
 
     const completion = await openai.chat.completions.create({
