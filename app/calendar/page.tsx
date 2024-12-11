@@ -39,15 +39,15 @@ export default function CalendarPage() {
   const [error, setError] = useState<string | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const [vision, setVision] = useState<string | null>(null);
-  const [empireGoals, setEmpireGoals] = useState<any[]>([]);
-  const [dailyActions, setDailyActions] = useState<any[]>([]);
+  const [empireGoals, setEmpireGoals] = useState<EmpireGoal[]>([]);
+  const [dailyActions, setDailyActions] = useState<DailyAction[]>([]);
 
   // Cache goals data
   const goalsCache = useRef<{
     data: {
       vision: string | null;
-      empireGoals: any[];
-      dailyActions: any[];
+      empireGoals: EmpireGoal[];
+      dailyActions: DailyAction[];
     } | null;
     lastFetched: number;
     cacheDuration: number;
@@ -127,9 +127,10 @@ export default function CalendarPage() {
           messages: newMessages,
           context: {
             basePersonality: `You are a helpful AI assistant focused on calendar and scheduling. Help users plan their day effectively, considering their goals and commitments. Provide practical advice for time management and productivity.`,
-            conversationType: "calendar",
+            conversationType: "calendar" as const,
             relevantQuotes: [],
-            relevantGoals: empireGoals || []
+            relevantGoals: empireGoals,
+            relevantJournalEntries: []
           }
         }),
       });

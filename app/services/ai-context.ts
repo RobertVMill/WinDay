@@ -12,7 +12,7 @@ export interface AIContext {
   relevantGoals: any[];
   relevantQuotes: any[];
   relevantJournalEntries: any[];
-  conversationType: 'goal_setting' | 'workout_planning' | 'reflection' | 'general';
+  conversationType: 'calendar' | 'goal_setting' | 'workout_planning' | 'reflection' | 'general';
 }
 
 export class AIContextManager {
