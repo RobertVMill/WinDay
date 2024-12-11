@@ -1,6 +1,5 @@
 import OpenAI from 'openai';
 import type { AIContext } from '@/app/services/ai-context';
-import { supabase } from '@/app/utils/db';
 import { NextResponse } from 'next/server';
 
 const openai = new OpenAI({
@@ -8,10 +7,11 @@ const openai = new OpenAI({
 });
 
 function createSystemMessage(context: AIContext): string {
-  let systemPrompt = context.basePersonality;
+  // Set default base personality if not provided
+  let systemPrompt = context?.basePersonality || 'You are a helpful AI assistant focused on personal development.';
 
   // Add relevant quotes if available
-  if (context.relevantQuotes.length > 0) {
+  if (context?.relevantQuotes?.length > 0) {
     systemPrompt += '\n\nRelevant Quotes:\n';
     context.relevantQuotes.forEach(quote => {
       systemPrompt += `- "${quote.content}" (${quote.source || 'Personal Collection'})\n`;
@@ -19,7 +19,7 @@ function createSystemMessage(context: AIContext): string {
   }
 
   // Add relevant goals if available
-  if (context.relevantGoals.length > 0) {
+  if (context?.relevantGoals?.length > 0) {
     systemPrompt += '\n\nCurrent Goals:\n';
     context.relevantGoals.forEach(goal => {
       if (goal.content) {
@@ -29,7 +29,10 @@ function createSystemMessage(context: AIContext): string {
   }
 
   // Add conversation-specific context
-  switch (context.conversationType) {
+  switch (context?.conversationType) {
+    case 'calendar':
+      systemPrompt += '\n\nFocus on helping with calendar management, scheduling, and time optimization. Provide practical advice for planning and productivity.';
+      break;
     case 'goal_setting':
       systemPrompt += '\n\nFocus on helping achieve goals through the four empires framework. Reference the 100 subscribers milestone when relevant.';
       break;
@@ -39,6 +42,8 @@ function createSystemMessage(context: AIContext): string {
     case 'reflection':
       systemPrompt += '\n\nHelp extract insights and patterns from experiences. Connect observations to the four empires.';
       break;
+    default:
+      systemPrompt += '\n\nProvide helpful and actionable advice while maintaining a focus on personal development.';
   }
 
   return systemPrompt;
@@ -62,34 +67,29 @@ export async function POST(req: Request) {
       );
     }
 
+    const systemMessage = createSystemMessage(context);
+
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: "gpt-4-1106-preview",
       messages: [
-        { 
-          role: 'system', 
-          content: createSystemMessage(context)
-        },
+        { role: "system", content: systemMessage },
         ...messages
       ],
       temperature: 0.7,
+      max_tokens: 500,
     });
 
-    return NextResponse.json({
-      message: completion.choices[0].message,
-    });
-  } catch (error: any) {
-    console.error('Chat API error:', error);
-    
-    // Handle rate limit errors specifically
-    if (error?.code === 'rate_limit_exceeded') {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Please try again in a few minutes.' },
-        { status: 429 }
-      );
+    const content = completion.choices[0]?.message?.content;
+
+    if (!content) {
+      throw new Error('No response from OpenAI');
     }
 
+    return NextResponse.json({ content });
+  } catch (error) {
+    console.error('Chat error:', error);
     return NextResponse.json(
-      { error: 'Failed to process request' },
+      { error: error instanceof Error ? error.message : 'Failed to process chat request' },
       { status: 500 }
     );
   }

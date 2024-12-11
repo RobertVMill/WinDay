@@ -125,10 +125,11 @@ export default function CalendarPage() {
         },
         body: JSON.stringify({
           messages: newMessages,
-          goalsContext: {
-            vision,
-            empireGoals,
-            dailyActions
+          context: {
+            basePersonality: `You are a helpful AI assistant focused on calendar and scheduling. Help users plan their day effectively, considering their goals and commitments. Provide practical advice for time management and productivity.`,
+            conversationType: "calendar",
+            relevantQuotes: [],
+            relevantGoals: empireGoals || []
           }
         }),
       });
