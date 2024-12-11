@@ -1,15 +1,33 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { jwtVerify } from 'jose'
 
-export function middleware(request: NextRequest) {
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+export async function middleware(request: NextRequest) {
   // Get the pathname of the request (e.g. /, /protected-page)
   const path = request.nextUrl.pathname
 
   // Public paths that don't require authentication
-  const isPublicPath = path === '/' || path === '/auth/signin'
+  const isPublicPath = path === '/' || path === '/auth/signin' || path.startsWith('/api/auth')
 
   // Check if the user is authenticated
-  const isAuthenticated = request.cookies.get('isAuthenticated')?.value === 'true'
+  const authToken = request.cookies.get('auth-token')?.value
+  let isAuthenticated = false
+
+  if (authToken) {
+    try {
+      // Verify JWT token
+      await jwtVerify(
+        authToken,
+        new TextEncoder().encode(JWT_SECRET)
+      )
+      isAuthenticated = true
+    } catch (error) {
+      // Token is invalid or expired
+      isAuthenticated = false
+    }
+  }
 
   // If the user is on a public path and is authenticated,
   // redirect them to the home page
@@ -20,7 +38,14 @@ export function middleware(request: NextRequest) {
   // If the user is not on a public path and is not authenticated,
   // redirect them to the signin page
   if (!isPublicPath && !isAuthenticated) {
-    return NextResponse.redirect(new URL('/auth/signin', request.url))
+    const response = NextResponse.redirect(new URL('/auth/signin', request.url))
+    
+    // Clear any invalid tokens
+    if (authToken) {
+      response.cookies.delete('auth-token')
+    }
+    
+    return response
   }
 
   return NextResponse.next()

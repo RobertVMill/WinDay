@@ -13,12 +13,20 @@
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/supabase-js": "^2.46.2",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/react-resizable": "^3.0.8",
     "chart.js": "^4.4.6",
+    "jose": "^5.9.6",
+    "jsonwebtoken": "^9.0.2",
+    "konva": "^9.3.16",
     "next": "15.0.3",
     "openai": "^4.76.0",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-konva": "^19.0.1",
+    "react-resizable": "^3.0.5",
+    "react-xarrows": "^2.0.2"
   },
   "devDependencies": {
     "@types/node": "^20",
