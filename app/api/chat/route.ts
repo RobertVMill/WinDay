@@ -4,7 +4,7 @@ import { supabase } from '@/app/utils/db';
 import { NextResponse } from 'next/server';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '', // Allow empty string during build
+  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || '', // Allow empty string during build
 });
 
 function createSystemMessage(context: AIContext): string {
@@ -46,7 +46,7 @@ function createSystemMessage(context: AIContext): string {
 
 export async function POST(req: Request) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
       return NextResponse.json(
         { error: 'OpenAI API key is not configured' },
         { status: 500 }

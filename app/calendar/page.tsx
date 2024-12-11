@@ -108,13 +108,14 @@ export default function CalendarPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || isLoading) return;
 
-    const newMessage = { role: 'user' as const, content: inputMessage };
-    setMessages(prev => [...prev, newMessage]);
-    setInputMessage('');
-    setTypingIndicator(true);
+    setIsLoading(true);
     setError(null);
+    
+    const newMessages = [...messages, { role: 'user' as const, content: inputMessage }];
+    setMessages(newMessages);
+    setInputMessage('');
 
     try {
       const response = await fetch('/api/chat', {
@@ -123,7 +124,7 @@ export default function CalendarPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [...messages, newMessage],
+          messages: newMessages,
           goalsContext: {
             vision,
             empireGoals,
@@ -132,22 +133,22 @@ export default function CalendarPage() {
         }),
       });
 
-      const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to get response');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response');
       }
 
-      if (data.content) {
-        setMessages(prev => [...prev, { role: 'assistant' as const, content: data.content }]);
-      } else {
-        throw new Error('Invalid response format');
-      }
-    } catch (error) {
-      console.error('Chat error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to get response');
+      const data = await response.json();
+      setMessages([...newMessages, { role: 'assistant' as const, content: data.content }]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred while sending your message');
     } finally {
+      setIsLoading(false);
       setTypingIndicator(false);
+      // Scroll to bottom of chat
+      if (chatRef.current) {
+        chatRef.current.scrollTop = chatRef.current.scrollHeight;
+      }
     }
   };
 
@@ -189,6 +190,13 @@ export default function CalendarPage() {
                 </div>
               </div>
             ))}
+            {error && (
+              <div className="flex justify-start">
+                <div className="bg-red-100 dark:bg-red-700 rounded-lg p-3">
+                  <p className="text-red-500 dark:text-red-400">{error}</p>
+                </div>
+              </div>
+            )}
             {typingIndicator && (
               <div className="flex justify-start">
                 <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
@@ -207,13 +215,6 @@ export default function CalendarPage() {
                 </div>
               </div>
             )}
-            {error && (
-              <div className="flex justify-start">
-                <div className="bg-red-100 dark:bg-red-700 rounded-lg p-3">
-                  <p className="text-red-500 dark:text-red-400">{error}</p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Chat Input */}
@@ -228,10 +229,11 @@ export default function CalendarPage() {
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="Share your goals or ask for scheduling advice..."
                 className="flex-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoading}
               />
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !inputMessage.trim()}
                 className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
               >
                 Send
