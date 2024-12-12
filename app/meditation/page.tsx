@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../../lib/supabase';
 import QuoteDisplay from '../components/QuoteDisplay';
 
 interface _MeditationSession {
@@ -69,29 +68,13 @@ export default function MeditationPage() {
     }, 1000);
   };
 
-  const endMeditation = async () => {
+  const endMeditation = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
     setIsRunning(false);
     playBell();
     setShowSummary(true);
-
-    // Save session to database
-    try {
-      const { error } = await supabase
-        .from('meditation_sessions')
-        .insert([{
-          date: startTimeRef.current?.toISOString(),
-          duration_minutes: duration,
-          interval_minutes: intervalTime,
-          distraction_count: distractionCount
-        }]);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error saving meditation session:', error);
-    }
   };
 
   const trackDistraction = () => {

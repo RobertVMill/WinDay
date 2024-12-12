@@ -101,6 +101,50 @@ export interface Database {
           title?: string | null
           created_at?: string
         }
+      },
+      journal_entries: {
+        Row: {
+          id: number
+          date: string | null
+          gratitude: string | null
+          gifts: string | null
+          strategy: string | null
+          strategy_checks: Json | null
+          best_day: string | null
+          image_url: string | null
+          workout_notes: string | null
+          workout_category: string | null
+          deep_flow_activity: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          date?: string | null
+          gratitude?: string | null
+          gifts?: string | null
+          strategy?: string | null
+          strategy_checks?: Json | null
+          best_day?: string | null
+          image_url?: string | null
+          workout_notes?: string | null
+          workout_category?: string | null
+          deep_flow_activity?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          date?: string | null
+          gratitude?: string | null
+          gifts?: string | null
+          strategy?: string | null
+          strategy_checks?: Json | null
+          best_day?: string | null
+          image_url?: string | null
+          workout_notes?: string | null
+          workout_category?: string | null
+          deep_flow_activity?: string | null
+          created_at?: string
+        }
       }
       // ... other tables as needed
     }

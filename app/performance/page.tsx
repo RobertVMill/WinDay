@@ -7,9 +7,9 @@ import QuoteDisplay from '../components/QuoteDisplay';
 interface WorkoutEntry {
   id: number;
   date: string;
-  workout_notes: string;
-  workout_category: string;
-  best_day: string;
+  workout_notes: string | null;
+  workout_category: string | null;
+  best_day: string | null;
 }
 
 export default function PerformancePage() {
@@ -25,11 +25,18 @@ export default function PerformancePage() {
     try {
       const { data, error } = await supabase
         .from('journal_entries')
-        .select('id, date, workout_notes, workout_category, best_day')
-        .order('date', { ascending: false });
+        .select('id, date, workout_notes, workout_category, best_day');
 
       if (error) throw error;
-      setWorkouts(data || []);
+
+      const validWorkouts = (data || [])
+        .filter(entry => entry.date !== null)
+        .map(entry => ({
+          ...entry,
+          date: entry.date as string
+        }));
+
+      setWorkouts(validWorkouts);
     } catch (error) {
       console.error('Error fetching workouts:', error);
     } finally {

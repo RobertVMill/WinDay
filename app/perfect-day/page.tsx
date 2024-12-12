@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { _Resizable } from 'react-resizable';
-import 'react-resizable/css/styles.css';
 
 interface TimeBlock {
   id: string;
@@ -136,7 +134,7 @@ export default function PerfectDayPage() {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (_e: React.DragEvent, targetTimeSlot: string) => {
+  const handleDrop = (e: React.DragEvent, targetTimeSlot: string) => {
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData('text/plain'));
     const block = currentTemplate.timeBlocks.find(b => b.id === data.blockId);

@@ -5,7 +5,6 @@ import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import QuoteDisplay from '../components/QuoteDisplay';
-import { Database } from '../types/supabaseTypes';
 
 const DEFAULT_STRATEGY = `Trust the process. Love the work. Believe in your destiny. Build consistent momentum.
 
@@ -35,15 +34,14 @@ const DEFAULT_STRATEGY = `Trust the process. Love the work. Believe in your dest
 interface JournalEntry {
   id: number;
   date: string;
-  gratitude: string;
-  gifts: string;
-  strategy: string;
-  strategy_checks?: Record<string, boolean>;
-  best_day: string;
-  image_url: string;
-  workout_notes: string;
-  workout_category: string;
-  deep_flow_activity: string;
+  gratitude: string | null;
+  gifts: string | null;
+  strategy: string | null;
+  strategy_checks: any;
+  best_day: string | null;
+  image_url: string | null;
+  deep_flow_activity: string | null;
+  created_at?: string;
 }
 
 function parseStrategy(strategy: string): { text: string; items: string[] }[] {
@@ -111,7 +109,9 @@ function PreviousEntries({ onEntryClick }: { onEntryClick: (entry: JournalEntry)
       if (error) throw error;
 
       if (data) {
-        setEntries(data);
+        // Filter out entries with null dates
+        const validEntries = data.filter(entry => entry.date !== null) as JournalEntry[];
+        setEntries(validEntries);
       }
     } catch (error) {
       console.error('Error fetching entries:', error);
@@ -128,8 +128,14 @@ function PreviousEntries({ onEntryClick }: { onEntryClick: (entry: JournalEntry)
   const months = useMemo(() => {
     if (entries.length === 0) return [];
 
-    const firstDate = new Date(entries[0].date);
-    const lastDate = new Date(entries[entries.length - 1].date);
+    // Add null checks for dates
+    const firstEntry = entries[0].date;
+    const lastEntry = entries[entries.length - 1].date;
+    
+    if (!firstEntry || !lastEntry) return [];
+
+    const firstDate = new Date(firstEntry);
+    const lastDate = new Date(lastEntry);
     const timeRange = lastDate.getTime() - firstDate.getTime();
     const markers: { date: Date; position: number }[] = [];
 
@@ -339,23 +345,6 @@ function _EntryDetail({ entry, onClose }: { entry: JournalEntry; onClose: () => 
             <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{entry.gifts}</p>
           </div>
 
-          {entry.workout_category && (
-            <div>
-              <h3 className="font-medium mb-2">Workout Performance Yesterday</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                <span className="font-medium">Category:</span> {entry.workout_category}
-              </p>
-              <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap mt-2">{entry.workout_notes}</p>
-            </div>
-          )}
-
-          {entry.deep_flow_activity && (
-            <div>
-              <h3 className="font-medium mb-2">Deep Flow Activity</h3>
-              <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{entry.deep_flow_activity}</p>
-            </div>
-          )}
-
           <div>
             <h3 className="font-medium mb-2">Best Day Vision</h3>
             <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{entry.best_day}</p>
@@ -364,7 +353,7 @@ function _EntryDetail({ entry, onClose }: { entry: JournalEntry; onClose: () => 
           <div>
             <h3 className="font-medium mb-2">Strategy</h3>
             <StrategySection 
-              strategy={entry.strategy} 
+              strategy={entry.strategy || DEFAULT_STRATEGY} 
               checks={entry.strategy_checks}
             />
           </div>
@@ -381,8 +370,6 @@ export default function JournalPage() {
     strategy: DEFAULT_STRATEGY,
     strategy_checks: {},
     best_day: '',
-    workout_notes: '',
-    workout_category: '',
     deep_flow_activity: ''
   });
   const [scoreData, setScoreData] = useState({
@@ -409,26 +396,11 @@ export default function JournalPage() {
 
     try {
       // Save to journal entries
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('journal_entries')
         .insert([{ ...formData, date: new Date().toISOString() }]);
 
       if (error) throw error;
-
-      // Save to scorecard
-      const { error: scorecardError } = await supabase
-        .from('scorecards')
-        .insert([
-          {
-            date: new Date().toISOString(),
-            journal_entry_id: data[0].id,
-            mood_score: scoreData.mood_score,
-            energy_score: scoreData.energy_score,
-            notes: formData.gratitude
-          }
-        ]);
-
-      if (scorecardError) throw scorecardError;
 
       // Save to daily_scores
       const { error: dailyScoreError } = await supabase
@@ -454,8 +426,6 @@ export default function JournalPage() {
         strategy: DEFAULT_STRATEGY,
         strategy_checks: {},
         best_day: '',
-        workout_notes: '',
-        workout_category: '',
         deep_flow_activity: ''
       });
 
@@ -518,7 +488,7 @@ export default function JournalPage() {
                   Today&apos;s Gratitude
                 </label>
                 <textarea
-                  value={formData.gratitude}
+                  value={formData.gratitude || ''}
                   onChange={(e) => handleEntryChange('gratitude', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="What are you grateful for today?"
@@ -530,7 +500,7 @@ export default function JournalPage() {
                   Today&apos;s Gifts
                 </label>
                 <textarea
-                  value={formData.gifts}
+                  value={formData.gifts || ''}
                   onChange={(e) => handleEntryChange('gifts', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="What gifts did you receive or give today?"
@@ -542,10 +512,22 @@ export default function JournalPage() {
                   Deep Flow Activity
                 </label>
                 <textarea
-                  value={formData.deep_flow_activity}
+                  value={formData.deep_flow_activity || ''}
                   onChange={(e) => handleEntryChange('deep_flow_activity', e.target.value)}
                   className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="What activity got you into deep flow today?"
+                />
+              </div>
+
+              <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Make Today Your Best Day
+                </label>
+                <textarea
+                  value={formData.best_day || ''}
+                  onChange={(e) => handleEntryChange('best_day', e.target.value)}
+                  className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  placeholder="What would make today your absolute best day?"
                 />
               </div>
             </div>
@@ -562,42 +544,6 @@ export default function JournalPage() {
                     onToggle={handleStrategyCheck}
                   />
                 </div>
-              </div>
-
-              <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Workout Performance Yesterday
-                </label>
-                <select
-                  value={formData.workout_category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, workout_category: e.target.value }))}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                >
-                  <option value="">Select category</option>
-                  <option value="upper_body">Upper Body Strength</option>
-                  <option value="lower_body">Lower Body Strength</option>
-                  <option value="endurance">Endurance</option>
-                </select>
-                {formData.workout_category && (
-                  <textarea
-                    value={formData.workout_notes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, workout_notes: e.target.value }))}
-                    placeholder="How was your workout performance yesterday? Include exercises, sets, reps, and any notable achievements or challenges..."
-                    className="mt-2 w-full p-2 border rounded h-32 dark:bg-gray-700 dark:border-gray-600"
-                  />
-                )}
-              </div>
-
-              <div className="bg-gray-800 rounded-lg p-4 sm:p-6">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Make Today Your Best Day
-                </label>
-                <textarea
-                  value={formData.best_day}
-                  onChange={(e) => handleEntryChange('best_day', e.target.value)}
-                  className="w-full h-32 bg-gray-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  placeholder="What would make today your absolute best day?"
-                />
               </div>
             </div>
           </div>
