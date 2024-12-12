@@ -104,7 +104,7 @@ function PreviousEntries({ onEntryClick }: { onEntryClick: (entry: JournalEntry)
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from<Database['public']['Tables']['journal_entries']['Row'], Database['public']['Tables']['journal_entries']['Insert']>('journal_entries')
+        .from('journal_entries')
         .select('*')
         .order('date', { ascending: true });
 
@@ -410,13 +410,8 @@ export default function JournalPage() {
     try {
       // Save to journal entries
       const { data, error } = await supabase
-        .from<Database['public']['Tables']['journal_entries']['Row'], Database['public']['Tables']['journal_entries']['Insert']>('journal_entries')
-        .insert([{
-          ...formData,
-          date: new Date().toISOString(),
-        }])
-        .select()
-        .single();
+        .from('journal_entries')
+        .insert([{ ...formData, date: new Date().toISOString() }]);
 
       if (error) throw error;
 
@@ -426,7 +421,7 @@ export default function JournalPage() {
         .insert([
           {
             date: new Date().toISOString(),
-            journal_entry_id: data.id,
+            journal_entry_id: data[0].id,
             mood_score: scoreData.mood_score,
             energy_score: scoreData.energy_score,
             notes: formData.gratitude
