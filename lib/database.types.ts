@@ -82,6 +82,26 @@ export interface Database {
           total_score?: number | null
         }
       }
+      quotes: {
+        Row: {
+          id: number
+          quote: string
+          title: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          quote: string
+          title?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          quote?: string
+          title?: string | null
+          created_at?: string
+        }
+      }
       // ... other tables as needed
     }
     Views: {

@@ -31,6 +31,7 @@ export default function SignIn() {
         setError(data.error || 'Invalid password');
       }
     } catch (err) {
+      console.error(err);
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);

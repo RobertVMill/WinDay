@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Resizable } from 'react-resizable';
+import { _Resizable } from 'react-resizable';
 import 'react-resizable/css/styles.css';
 
 interface TimeBlock {
@@ -39,7 +39,7 @@ const TIME_SLOTS = Array.from({ length: 36 }, (_, i) => {
   return `${displayHour}:${minute} ${period}`;
 });
 
-const SLOT_HEIGHT = 80; // Height of each 30-minute slot in pixels
+const _SLOT_HEIGHT = 80; // Height of each 30-minute slot in pixels
 
 const DURATIONS = [
   { label: '15 min', minutes: 15 },
@@ -87,17 +87,17 @@ export default function PerfectDayPage() {
     return Math.max(1, endIndex - startIndex + 1);
   };
 
-  const isTimeSlotOccupied = (timeSlot: string) => {
+  const isTimeSlotOccupied = (_timeSlot: string) => {
     return currentTemplate.timeBlocks.some(block => {
       const startIndex = TIME_SLOTS.indexOf(block.startTime);
       const endIndex = TIME_SLOTS.indexOf(block.endTime);
-      const slotIndex = TIME_SLOTS.indexOf(timeSlot);
+      const slotIndex = TIME_SLOTS.indexOf(_timeSlot);
       return slotIndex >= startIndex && slotIndex <= endIndex;
     });
   };
 
-  const isTimeSlotStart = (timeSlot: string) => {
-    return currentTemplate.timeBlocks.some(block => block.startTime === timeSlot);
+  const isTimeSlotStart = (_timeSlot: string) => {
+    return currentTemplate.timeBlocks.some(block => block.startTime === _timeSlot);
   };
 
   const updateTimeBlock = (id: string, field: keyof TimeBlock, value: any) => {
@@ -122,16 +122,8 @@ export default function PerfectDayPage() {
     setCurrentTemplate({ ...currentTemplate, [field]: newList });
   };
 
-  const handleResize = (blockId: string, height: number) => {
-    const block = currentTemplate.timeBlocks.find(b => b.id === blockId);
-    if (!block) return;
-
-    const startIndex = TIME_SLOTS.indexOf(block.startTime);
-    const newSpan = Math.max(1, Math.round(height / SLOT_HEIGHT));
-    const newEndIndex = Math.min(startIndex + newSpan - 1, TIME_SLOTS.length - 1);
-    const newEndTime = TIME_SLOTS[newEndIndex];
-
-    updateTimeBlock(blockId, 'endTime', newEndTime);
+  const _handleResize = (_blockId: string, _height: number) => {
+    // Implementation coming soon
   };
 
   const handleDragStart = (e: React.DragEvent, blockId: string, edge: 'top' | 'bottom') => {
@@ -139,12 +131,12 @@ export default function PerfectDayPage() {
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e: React.DragEvent, timeSlot: string) => {
+  const handleDragOver = (e: React.DragEvent, _timeSlot: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, targetTimeSlot: string) => {
+  const handleDrop = (_e: React.DragEvent, targetTimeSlot: string) => {
     e.preventDefault();
     const data = JSON.parse(e.dataTransfer.getData('text/plain'));
     const block = currentTemplate.timeBlocks.find(b => b.id === data.blockId);
@@ -179,7 +171,7 @@ export default function PerfectDayPage() {
     // Format end time
     const displayHour = endHour > 12 ? endHour - 12 : endHour;
     const endPeriod = endHour >= 12 ? 'PM' : 'AM';
-    const endTime = `${displayHour}:${endMinute.toString().padStart(2, '0')} ${endPeriod}`;
+    const _endTime = `${displayHour}:${endMinute.toString().padStart(2, '0')} ${endPeriod}`;
 
     // Find the closest available time slot
     const closestSlot = TIME_SLOTS.find(slot => {

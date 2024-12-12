@@ -41,32 +41,32 @@ export default function Dashboard() {
   ];
 
   useEffect(() => {
+    const fetchTools = async () => {
+      let query = supabase
+        .from('ai_tools')
+        .select('*')
+        .order('launch_date', { ascending: false });
+
+      if (selectedCategory !== 'all') {
+        query = query.eq('category', selectedCategory);
+      }
+
+      if (searchQuery) {
+        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching tools:', error);
+        return;
+      }
+
+      setTools(data || []);
+    };
+
     fetchTools();
   }, [selectedCategory, searchQuery]);
-
-  async function fetchTools() {
-    let query = supabase
-      .from('ai_tools')
-      .select('*')
-      .order('launch_date', { ascending: false });
-
-    if (selectedCategory !== 'all') {
-      query = query.eq('category', selectedCategory);
-    }
-
-    if (searchQuery) {
-      query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching tools:', error);
-      return;
-    }
-
-    setTools(data || []);
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">

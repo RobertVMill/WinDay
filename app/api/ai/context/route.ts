@@ -3,7 +3,7 @@ import { supabase } from '@/app/utils/db';
 
 export async function POST(request: Request) {
   try {
-    const { conversationType, currentPath } = await request.json();
+    const { conversationType, _currentPath } = await request.json();
 
     // Get base personality
     const { data: personalityData, error: personalityError } = await supabase

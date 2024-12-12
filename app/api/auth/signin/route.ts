@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { SignJWT } from 'jose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';

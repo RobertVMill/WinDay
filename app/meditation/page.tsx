@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import QuoteDisplay from '../components/QuoteDisplay';
 
-interface MeditationSession {
+interface _MeditationSession {
   duration_minutes: number;
   interval_minutes: number | null;
   distraction_count: number;

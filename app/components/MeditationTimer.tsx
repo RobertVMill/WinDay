@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 interface Props {
   duration: number;
@@ -9,7 +9,7 @@ interface Props {
 export default function MeditationTimer({ duration, onComplete, onCancel }: Props) {
   const [timeLeft, setTimeLeft] = useState(duration * 60);
   const [isPaused, setIsPaused] = useState(false);
-  const bellSound = new Audio('/sounds/bell_sound.mp3');
+  const bellSound = useMemo(() => new Audio('/sounds/bell_sound.mp3'), []);
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
   const [focusTaps, setFocusTaps] = useState(0);
   const [showTapFeedback, setShowTapFeedback] = useState(false);
@@ -32,9 +32,11 @@ export default function MeditationTimer({ duration, onComplete, onCancel }: Prop
 
     // Release wake lock when component unmounts
     return () => {
-      wakeLock?.release().catch(console.error);
+      if (wakeLock) {
+        wakeLock.release().catch(console.error);
+      }
     };
-  }, []);
+  }, [wakeLock]);
 
   // Re-request wake lock if page visibility changes
   useEffect(() => {
@@ -63,7 +65,9 @@ export default function MeditationTimer({ duration, onComplete, onCancel }: Prop
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          wakeLock?.release().catch(console.error);
+          if (wakeLock) {
+            wakeLock.release().catch(console.error);
+          }
           bellSound.play().then(() => {
             setTimeout(() => onComplete(focusTaps), 2000);
           }).catch(err => {
@@ -94,7 +98,9 @@ export default function MeditationTimer({ duration, onComplete, onCancel }: Prop
   };
 
   const handleEndEarly = () => {
-    wakeLock?.release().catch(console.error);
+    if (wakeLock) {
+      wakeLock.release().catch(console.error);
+    }
     bellSound.play().catch(console.error);
     onCancel();
   };

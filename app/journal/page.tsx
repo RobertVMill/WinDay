@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import QuoteDisplay from '../components/QuoteDisplay';
+import { Database } from '../types/supabaseTypes';
 
 const DEFAULT_STRATEGY = `Trust the process. Love the work. Believe in your destiny. Build consistent momentum.
 
@@ -90,7 +91,7 @@ function StrategySection({ strategy, checks, onToggle }: {
 function PreviousEntries({ onEntryClick }: { onEntryClick: (entry: JournalEntry) => void }) {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [_hasMore, _setHasMore] = useState(true);
   const timelineRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const lastDragX = useRef(0);
@@ -103,7 +104,7 @@ function PreviousEntries({ onEntryClick }: { onEntryClick: (entry: JournalEntry)
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('journal_entries')
+        .from<Database['public']['Tables']['journal_entries']['Row'], Database['public']['Tables']['journal_entries']['Insert']>('journal_entries')
         .select('*')
         .order('date', { ascending: true });
 
@@ -302,7 +303,7 @@ function PreviousEntries({ onEntryClick }: { onEntryClick: (entry: JournalEntry)
   );
 }
 
-function EntryDetail({ entry, onClose }: { entry: JournalEntry; onClose: () => void }) {
+function _EntryDetail({ entry, onClose }: { entry: JournalEntry; onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
@@ -397,7 +398,7 @@ export default function JournalPage() {
     energy_score: 0
   });
   const [showSuccess, setShowSuccess] = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
+  const [_selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
@@ -409,7 +410,7 @@ export default function JournalPage() {
     try {
       // Save to journal entries
       const { data, error } = await supabase
-        .from('journal_entries')
+        .from<Database['public']['Tables']['journal_entries']['Row'], Database['public']['Tables']['journal_entries']['Insert']>('journal_entries')
         .insert([{
           ...formData,
           date: new Date().toISOString(),

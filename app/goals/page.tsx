@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import QuoteDisplay from '../components/QuoteDisplay';
+import _QuoteDisplay from '../components/QuoteDisplay';
 import Link from 'next/link';
+import BodyVisualizer from '../components/BodyVisualizer';
 
 interface Metric {
   name: string;
@@ -78,6 +79,8 @@ export default function GoalsPage() {
     }
   ]);
 
+  const [selectedPart, setSelectedPart] = useState<string>();
+
   // Load saved values from localStorage on component mount
   useEffect(() => {
     const savedEmpires = localStorage.getItem('empires');
@@ -99,67 +102,73 @@ export default function GoalsPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Empire Building</h1>
-          <p className="text-xl text-gray-400 italic mb-2">
-            Bert, you have the chance to build something really special for the world.
-          </p>
-          <p className="text-lg text-gray-400 italic">
-            Your mix of energy (body), empathy (heart), vibrance (gut), and intelligence (mind) all in the top 1% makes you a unicorn.
-          </p>
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-12">
+          <BodyVisualizer 
+            selectedPart={selectedPart}
+            onPartClick={setSelectedPart}
+          />
         </div>
+      </div>
+      <div className="text-center">
+        <h1 className="text-4xl font-bold mb-4">Empire Building</h1>
+        <p className="text-xl text-gray-400 italic mb-2">
+          Bert, you have the chance to build something really special for the world.
+        </p>
+        <p className="text-lg text-gray-400 italic">
+          Your mix of energy (body), empathy (heart), vibrance (gut), and intelligence (mind) all in the top 1% makes you a unicorn.
+        </p>
+      </div>
 
-        {/* Empires */}
-        <div className="grid gap-6">
-          {empires.map((empire, empireIndex) => (
-            <div key={empire.name} className="bg-gray-800 rounded-lg p-6">
-              <h2 className="text-2xl font-bold mb-2">{empire.name}</h2>
-              <p className="text-gray-400 mb-4">{empire.description}</p>
-              <div className="space-y-4">
-                {empire.metrics.map((metric, metricIndex) => (
-                  <div key={metric.name} className="flex items-center justify-between">
-                    <span className="text-gray-300">{metric.name}</span>
-                    <div className="flex items-center gap-2">
-                      {metric.type === 'number' && metric.isEditable ? (
-                        <>
+      {/* Empires */}
+      <div className="grid gap-6">
+        {empires.map((empire, empireIndex) => (
+          <div key={empire.name} className="bg-gray-800 rounded-lg p-6">
+            <h2 className="text-2xl font-bold mb-2">{empire.name}</h2>
+            <p className="text-gray-400 mb-4">{empire.description}</p>
+            <div className="space-y-4">
+              {empire.metrics.map((metric, metricIndex) => (
+                <div key={metric.name} className="flex items-center justify-between">
+                  <span className="text-gray-300">{metric.name}</span>
+                  <div className="flex items-center gap-2">
+                    {metric.type === 'number' && metric.isEditable ? (
+                      <>
+                        <input
+                          type="number"
+                          value={metric.value}
+                          onChange={(e) => handleMetricUpdate(empireIndex, metricIndex, Number(e.target.value))}
+                          className="bg-gray-700 text-white px-3 py-1 rounded w-24 text-right"
+                        />
+                        {metric.date && (
                           <input
-                            type="number"
-                            value={metric.value}
-                            onChange={(e) => handleMetricUpdate(empireIndex, metricIndex, Number(e.target.value))}
-                            className="bg-gray-700 text-white px-3 py-1 rounded w-24 text-right"
+                            type="date"
+                            value={metric.date}
+                            onChange={(e) => handleMetricUpdate(empireIndex, metricIndex, metric.value, e.target.value)}
+                            className="bg-gray-700 text-white px-3 py-1 rounded"
                           />
-                          {metric.date && (
-                            <input
-                              type="date"
-                              value={metric.date}
-                              onChange={(e) => handleMetricUpdate(empireIndex, metricIndex, metric.value, e.target.value)}
-                              className="bg-gray-700 text-white px-3 py-1 rounded"
-                            />
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-blue-400">{metric.value}</span>
-                      )}
-                      {metric.unit && <span className="text-gray-400 ml-2">{metric.unit}</span>}
-                    </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-blue-400">{metric.value}</span>
+                    )}
+                    {metric.unit && <span className="text-gray-400 ml-2">{metric.unit}</span>}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
+      </div>
 
-        {/* Navigation Button */}
-        <div className="mt-8 flex justify-center">
-          <Link 
-            href="/calendar" 
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-medium transition-colors flex items-center gap-2"
-          >
-            View Weekly Schedule
-            <span className="text-xl">→</span>
-          </Link>
-        </div>
+      {/* Navigation Button */}
+      <div className="mt-8 flex justify-center">
+        <Link 
+          href="/calendar" 
+          className="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-medium transition-colors flex items-center gap-2"
+        >
+          View Weekly Schedule
+          <span className="text-xl">→</span>
+        </Link>
       </div>
     </div>
   );

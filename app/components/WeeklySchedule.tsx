@@ -5,7 +5,7 @@ import { format, startOfWeek, addDays, subWeeks, addWeeks } from 'date-fns';
 import MeditationTimer from './MeditationTimer';
 import Image from 'next/image';
 
-interface ScheduleBlock {
+export interface ScheduleBlock {
   id: number;
   day_of_week: number;
   phase: string;
@@ -123,7 +123,7 @@ const scheduleTemplates: { [key: string]: any } = {
   }
 };
 
-const mindsetsByPhase: { [key: string]: string } = {
+const _mindsetsByPhase: { [key: string]: string } = {
   first_thing: "One deep breath at a time, release thought and achieve complete stillness and serotonin.",
   early_morning: "Find damage early, let the natural painkillers carry you.",
   morning: "Find dopamine early and let the curiosity carry you.",
@@ -147,8 +147,9 @@ const generateDefaultBlocks = (date: Date): ScheduleBlock[] => {
       id: id++,
       day_of_week: dayOfWeek,
       phase,
-      activity: PHASE_DESCRIPTIONS[phase] || '',
+      activity: typeof PHASE_DESCRIPTIONS[phase] === 'string' ? PHASE_DESCRIPTIONS[phase] : '',
       completed: false,
+      notes: '',
       day_type: 'standard_work'
     });
   });
@@ -210,9 +211,6 @@ const WeeklySchedule: React.FC<Props> = ({
   });
   const [editingBlock, setEditingBlock] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
-  const [completingBlock, setCompletingBlock] = useState<number | null>(null);
-  const [showingNoteInput, setShowingNoteInput] = useState(false);
-  const [completionNote, setCompletionNote] = useState('');
   const [journalingBlock, setJournalingBlock] = useState<number | null>(null);
   const [journalEntry, setJournalEntry] = useState<JournalEntry>({
     gratitude: '',
@@ -225,36 +223,35 @@ const WeeklySchedule: React.FC<Props> = ({
     eveningYoga: false,
     wishStrangersWell: false,
   });
-  const [meditationBlock, setMeditationBlock] = useState<number | null>(null);
+  const [_meditationBlock, setMeditationBlock] = useState<number | null>(null);
   const [activeTimer, setActiveTimer] = useState<{ blockId: number; duration: number } | null>(null);
-  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week');
 
   const getActivityStyle = (activity: string) => {
     switch (activity.toLowerCase()) {
       case 'meditation':
-        return 'bg-purple-500/80 text-white';
+        return 'bg-purple-500/20 border-l-4 border-purple-500 text-purple-100';
       case 'journal':
-        return 'bg-indigo-400/80 text-white';
+        return 'bg-indigo-500/20 border-l-4 border-indigo-500 text-indigo-100';
       case 'workout':
-        return 'bg-red-500/80 text-white';
+        return 'bg-red-500/20 border-l-4 border-red-500 text-red-100';
       case 'writing':
-        return 'bg-blue-500/80 text-white';
+        return 'bg-blue-500/20 border-l-4 border-blue-500 text-blue-100';
       case 'deep work':
-        return 'bg-green-500/80 text-white';
+        return 'bg-green-500/20 border-l-4 border-green-500 text-green-100';
       case 'meal':
-        return 'bg-yellow-500/80 text-white';
+        return 'bg-yellow-500/20 border-l-4 border-yellow-500 text-yellow-100';
       case 'coding':
-        return 'bg-indigo-500/80 text-white';
+        return 'bg-pink-500/20 border-l-4 border-pink-500 text-pink-100';
       case 'entertainment':
-        return 'bg-pink-500/80 text-white';
+        return 'bg-orange-500/20 border-l-4 border-orange-500 text-orange-100';
       case 'sleep score':
-        return 'bg-blue-500/80 text-white';
+        return 'bg-blue-500/20 border-l-4 border-blue-500 text-blue-100';
       default:
-        return 'bg-gray-500/80 text-white';
+        return 'bg-gray-500/20 border-l-4 border-gray-500 text-gray-100';
     }
   };
 
-  const formatPhase = (phase: string) => {
+  const _formatPhase = (phase: string) => {
     return phase
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -267,7 +264,7 @@ const WeeklySchedule: React.FC<Props> = ({
     );
   };
 
-  const currentWeekDates = useMemo(() => [...Array(7)].map((_, i) => 
+  const _currentWeekDates = useMemo(() => [...Array(7)].map((_, i) => 
     addDays(currentWeekStart, i)
   ), [currentWeekStart]);
 
@@ -279,7 +276,11 @@ const WeeklySchedule: React.FC<Props> = ({
     setCurrentWeekStart(prev => addWeeks(prev, 1));
   };
 
-  const handleMeditationComplete = async (focusTaps: number) => {
+  const _startMeditation = useCallback((block: ScheduleBlock) => {
+    setActiveTimer({ blockId: block.id, duration: 20 }); // Default 20 minutes
+  }, []);
+
+  const handleMeditationComplete = useCallback(async (focusTaps: number) => {
     if (activeTimer) {
       try {
         const updatedBlocks = blocks.map(block => 
@@ -293,7 +294,11 @@ const WeeklySchedule: React.FC<Props> = ({
         console.error('Error completing meditation:', error);
       }
     }
-  };
+  }, [activeTimer, blocks, onBlocksUpdate]);
+
+  const handleMeditationCancel = useCallback(() => {
+    setActiveTimer(null);
+  }, []);
 
   const toggleCompleted = async (blockId: number, completed: boolean) => {
     const updatedBlocks = blocks.map(block => 
@@ -307,10 +312,6 @@ const WeeklySchedule: React.FC<Props> = ({
       block.id === blockId ? { ...block, notes } : block
     );
     onBlocksUpdate?.(updatedBlocks);
-  };
-
-  const startMeditation = async (blockId: number, duration: number) => {
-    setActiveTimer({ blockId, duration });
   };
 
   const handleDayTypeChange = async (dayType: string, dayIndex: number) => {
@@ -330,9 +331,10 @@ const WeeklySchedule: React.FC<Props> = ({
       day_of_week: dayIndex,
       day_type: effectiveDayType,
       phase,
-      activity,
+      activity: typeof activity === 'string' ? activity : '',
       completed: false,
-      notes: null
+      notes: '',
+      focus_taps: undefined
     }));
 
     // Update local state
@@ -368,7 +370,7 @@ const WeeklySchedule: React.FC<Props> = ({
         <MeditationTimer
           duration={activeTimer.duration}
           onComplete={handleMeditationComplete}
-          onCancel={() => setActiveTimer(null)}
+          onCancel={handleMeditationCancel}
         />
       )}
 
@@ -397,15 +399,17 @@ const WeeklySchedule: React.FC<Props> = ({
         <div className="font-medium">Phase</div>
         {DAYS.map((day, index) => {
           const date = addDays(currentWeekStart, index);
+          const isToday = format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
+          const isPast = date < today;
           const dayType = blocks.find(b => b.day_of_week === index)?.day_type || 'standard_work';
           return (
-            <div key={day} className="text-center space-y-1">
+            <div key={day} className={`text-center space-y-1 ${isPast ? 'opacity-50' : ''} ${isToday ? 'ring-2 ring-blue-500 rounded-lg p-1' : ''}`}>
               <div className="font-medium">{day}</div>
               <div className="text-sm text-gray-400">{format(date, 'M/d')}</div>
               <select
                 value={dayType}
                 onChange={(e) => handleDayTypeChange(e.target.value, index)}
-                className="text-xs bg-gray-800 border border-gray-700 rounded px-1 py-0.5"
+                className="text-xs bg-gray-800 border border-gray-700 rounded px-1 py-0.5 w-full"
               >
                 <option value="standard_work">Standard Work</option>
                 <option value="deep_work">Deep Work</option>
@@ -426,16 +430,14 @@ const WeeklySchedule: React.FC<Props> = ({
               return (
                 <div
                   key={dayIndex}
-                  className={`border border-gray-800 rounded p-2 ${
-                    isWeekend(dayIndex) ? 'bg-gray-900/50' : ''
-                  }`}
+                  className={`border border-gray-800 rounded p-2`}
                 >
                   {blocks.map((block) => (
                     <div
                       key={block.id}
-                      className={`mb-2 last:mb-0 ${
-                        block.completed ? 'opacity-50' : ''
-                      }`}
+                      className={`mb-2 last:mb-0 p-2 rounded-lg transition-all duration-200 ${
+                        getActivityStyle(block.activity)
+                      } ${block.completed ? 'opacity-50' : ''} hover:opacity-90`}
                     >
                       <div className="flex items-center gap-2">
                         <input

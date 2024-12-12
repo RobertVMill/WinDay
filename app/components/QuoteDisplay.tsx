@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 
 interface Quote {
@@ -26,7 +26,7 @@ export default function QuoteDisplay({
   const [currentQuote, setCurrentQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchRandomQuote = async () => {
+  const fetchRandomQuote = useCallback(async () => {
     try {
       let query = supabase
         .from('quotes')
@@ -48,18 +48,18 @@ export default function QuoteDisplay({
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchRandomQuote();
   }, [empire]);
 
   useEffect(() => {
-    if (autoRefresh) {
-      const interval = setInterval(fetchRandomQuote, refreshInterval);
-      return () => clearInterval(interval);
-    }
-  }, [autoRefresh, refreshInterval]);
+    fetchRandomQuote();
+  }, [fetchRandomQuote]);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(fetchRandomQuote, refreshInterval);
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchRandomQuote, refreshInterval]);
 
   if (loading) {
     return <div className="animate-pulse">Loading wisdom...</div>;
