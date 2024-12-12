@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import { Space_Grotesk } from 'next/font/google';
 import "./globals.css";
 import Navbar from "./components/Navbar";
-import AIAssistant from "./components/AIAssistant"; // Added import statement
+import AIAssistant from "./components/AIAssistant";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
