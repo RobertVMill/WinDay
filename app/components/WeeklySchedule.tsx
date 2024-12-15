@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, startOfWeek, addDays, subWeeks, addWeeks } from 'date-fns';
 import MeditationTimer from './MeditationTimer';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export interface ScheduleBlock {
   id: number;
@@ -12,13 +13,15 @@ export interface ScheduleBlock {
   activity: string;
   completed: boolean;
   notes?: string;
-  focus_taps?: number;
   day_type: string;
+  instruction?: string;
 }
 
 interface Props {
   scheduleBlocks: ScheduleBlock[];
   onBlocksUpdate?: (blocks: ScheduleBlock[]) => void;
+  singleDayMode?: boolean;
+  showInstructions?: boolean;
 }
 
 interface JournalEntry {
@@ -38,26 +41,42 @@ const PHASES = [
   'first_thing',    // Meditation
   'journal',        // Journal
   'early_morning',  // Workout
-  'morning',        // Article
-  'mid_morning',    // Deep Work 1
+  'morning',        // Deep Work/Fireside
   'lunch',          // Lunch break
   'afternoon',      // Afternoon work
   'evening',        // Evening work
   'night',          // Entertainment
-  'sleep'           // Sleep Score
+  'sleep'           // Sleep
 ] as const;
 
 const PHASE_DESCRIPTIONS = {
   first_thing: 'Meditation',
   journal: 'Journal',
   early_morning: 'Workout',
-  morning: 'Article',
-  mid_morning: 'Deep Work 1',
+  morning: 'Deep Work',
   lunch: 'Lunch break',
   afternoon: 'Afternoon work',
   evening: 'Evening work',
   night: 'Entertainment',
-  sleep: 'Sleep Score'
+  sleep: 'Sleep'
+};
+
+const PHASE_LOVE_NOTES = {
+  first_thing: "I love the process of getting higher through belly breath and third eye attention",
+  journal: "I love the process of clarifying my intentions, and aligning my energy",
+  early_morning: "I love the process of finding pain and attacking pain, finding pain and attacking pain",
+  morning: (dayOfWeek: number) => 
+    dayOfWeek === 0 
+      ? "I love getting so granular in the work that the dopamine gets me high and I forget where I am"
+      : "I love getting so granular in the work that the dopamine gets me high and I forget where I am",
+  lunch: "I love nourishing my gut with the softest, most nutrient rich foods",
+  afternoon: (dayOfWeek: number) =>
+    dayOfWeek === 0
+      ? "I love getting so granular in the work that the dopamine gets me high and I forget where I am"
+      : "I love getting so granular in the work that the dopamine gets me high and I forget where I am",
+  evening: "I love seeing the incredible creativity that can come in tandem with my mind and AI",
+  night: "Time to wind down and reflect",
+  sleep: "Rest and recharge for tomorrow's journey"
 };
 
 const scheduleTemplates: { [key: string]: any } = {
@@ -71,7 +90,7 @@ const scheduleTemplates: { [key: string]: any } = {
     evening: 'Review & Plan',
     night: 'Reading',
     journal: 'Reflection',
-    sleep: 'Sleep Score'
+    sleep: 'Sleep'
   },
   weekend: {
     first_thing: 'Gentle Meditation',
@@ -83,7 +102,7 @@ const scheduleTemplates: { [key: string]: any } = {
     evening: 'Social Time',
     night: 'Entertainment',
     journal: 'Weekend Reflection',
-    sleep: 'Sleep Score'
+    sleep: 'Sleep'
   },
   deep_work: {
     first_thing: 'Meditation',
@@ -95,7 +114,7 @@ const scheduleTemplates: { [key: string]: any } = {
     evening: 'Learning Time',
     night: 'Wind Down',
     journal: 'Progress Notes',
-    sleep: 'Sleep Score'
+    sleep: 'Sleep'
   },
   rest: {
     first_thing: 'Gentle Meditation',
@@ -107,7 +126,7 @@ const scheduleTemplates: { [key: string]: any } = {
     evening: 'Entertainment',
     night: 'Relaxation',
     journal: 'Gratitude',
-    sleep: 'Sleep Score'
+    sleep: 'Sleep'
   },
   random: {
     first_thing: 'Dance Meditation',
@@ -119,18 +138,18 @@ const scheduleTemplates: { [key: string]: any } = {
     evening: 'Board Game Night',
     night: 'Stargazing',
     journal: 'Adventure Planning',
-    sleep: 'Sleep Score'
+    sleep: 'Sleep'
   }
 };
 
 const _mindsetsByPhase: { [key: string]: string } = {
   first_thing: "One deep breath at a time, release thought and achieve complete stillness and serotonin.",
   early_morning: "Find damage early, let the natural painkillers carry you.",
-  morning: "Find dopamine early and let the curiosity carry you.",
-  mid_morning: "Be collaborative and empathetic. Every interaction is an opportunity to learn.",
+  morning: "Love the process of losing yourself in your work, losing track of time, forgetting where you are concentrating the value of your product, and watching the money grow",
+  mid_morning: "Love the process of losing yourself in your work, losing track of time, forgetting where you are concentrating the value of your product, and watching the money grow",
   lunch: "Practice mindful eating. Nourish your body and mind.",
-  afternoon: "Find dopamine early and let the curiosity carry you.",
-  evening: "Find dopamine early and let the curiosity carry you.",
+  afternoon: "Love the process of losing yourself in your work, losing track of time, forgetting where you are concentrating the value of your product, and watching the money grow",
+  evening: "Love the process of losing yourself in your work, losing track of time, forgetting where you are concentrating the value of your product, and watching the money grow",
   night: "Embrace curiosity. Knowledge is an endless journey.",
   journal: "Be honest and vulnerable. Your experiences shape your growth.",
   sleep: "Rest and recharge for the next day's journey."
@@ -159,7 +178,9 @@ const generateDefaultBlocks = (date: Date): ScheduleBlock[] => {
 
 const WeeklySchedule: React.FC<Props> = ({
   scheduleBlocks: initialBlocks,
-  onBlocksUpdate
+  onBlocksUpdate,
+  singleDayMode,
+  showInstructions
 }) => {
   const [mounted, setMounted] = useState(false);
   
@@ -244,8 +265,10 @@ const WeeklySchedule: React.FC<Props> = ({
         return 'bg-pink-500/20 border-l-4 border-pink-500 text-pink-100';
       case 'entertainment':
         return 'bg-orange-500/20 border-l-4 border-orange-500 text-orange-100';
-      case 'sleep score':
+      case 'sleep':
         return 'bg-blue-500/20 border-l-4 border-blue-500 text-blue-100';
+      case 'fireside':
+        return 'bg-amber-500/20 border-l-4 border-amber-500 text-amber-100';
       default:
         return 'bg-gray-500/20 border-l-4 border-gray-500 text-gray-100';
     }
@@ -374,134 +397,185 @@ const WeeklySchedule: React.FC<Props> = ({
         />
       )}
 
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={previousWeek}
-          className="p-2 hover:bg-gray-800 rounded-full"
-        >
-          ←
-        </button>
-        <div className="text-center">
-          <div className="text-lg font-medium">
-            {format(currentWeekStart, 'MMMM d')} -{' '}
-            {format(addDays(currentWeekStart, 6), 'MMMM d, yyyy')}
-          </div>
-        </div>
-        <button
-          onClick={nextWeek}
-          className="p-2 hover:bg-gray-800 rounded-full"
-        >
-          →
-        </button>
-      </div>
-
-      <div className="grid grid-cols-[auto,repeat(7,1fr)] gap-4">
-        <div className="font-medium">Phase</div>
-        {DAYS.map((day, index) => {
-          const date = addDays(currentWeekStart, index);
-          const isToday = format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
-          const isPast = date < today;
-          const dayType = blocks.find(b => b.day_of_week === index)?.day_type || 'standard_work';
-          return (
-            <div key={day} className={`text-center space-y-1 ${isPast ? 'opacity-50' : ''} ${isToday ? 'ring-2 ring-blue-500 rounded-lg p-1' : ''}`}>
-              <div className="font-medium">{day}</div>
-              <div className="text-sm text-gray-400">{format(date, 'M/d')}</div>
-              <select
-                value={dayType}
-                onChange={(e) => handleDayTypeChange(e.target.value, index)}
-                className="text-xs bg-gray-800 border border-gray-700 rounded px-1 py-0.5 w-full"
-              >
-                <option value="standard_work">Standard Work</option>
-                <option value="deep_work">Deep Work</option>
-                <option value="standard_vacation">Vacation</option>
-                <option value="random">Random</option>
-                <option value="rest">Rest</option>
-                <option value="weekend">Weekend</option>
-              </select>
+      {!singleDayMode && (
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={previousWeek}
+            className="p-2 hover:bg-gray-800 rounded-full"
+          >
+            ←
+          </button>
+          <div className="text-center">
+            <div className="text-lg font-medium">
+              {format(currentWeekStart, 'MMMM d')} -{' '}
+              {format(addDays(currentWeekStart, 6), 'MMMM d, yyyy')}
             </div>
-          );
-        })}
+          </div>
+          <button
+            onClick={nextWeek}
+            className="p-2 hover:bg-gray-800 rounded-full"
+          >
+            →
+          </button>
+        </div>
+      )}
+
+      <div className={`grid ${singleDayMode ? 'grid-cols-[auto,1fr]' : 'grid-cols-[auto,repeat(7,1fr)]'} gap-4`}>
+        <div className="font-medium">Phase</div>
+        {singleDayMode ? (
+          <div className="text-center">
+            <div className="font-medium">{DAYS[new Date().getDay()]}</div>
+            <div className="text-sm text-gray-400">{format(new Date(), 'M/d')}</div>
+          </div>
+        ) : (
+          DAYS.map((day, index) => {
+            const date = addDays(currentWeekStart, index);
+            const isToday = format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
+            const isPast = date < today;
+            const dayType = blocks.find(b => b.day_of_week === index)?.day_type || 'standard_work';
+            return (
+              <div key={day} className={`text-center space-y-1 ${isPast ? 'opacity-50' : ''} ${isToday ? 'ring-2 ring-blue-500 rounded-lg p-1' : ''}`}>
+                <div className="font-medium">{day}</div>
+                <div className="text-sm text-gray-400">{format(date, 'M/d')}</div>
+                <select
+                  value={dayType}
+                  onChange={(e) => handleDayTypeChange(e.target.value, index)}
+                  className="text-xs bg-gray-800 border border-gray-700 rounded px-1 py-0.5 w-full"
+                >
+                  <option value="standard_work">Standard Work</option>
+                  <option value="deep_work">Deep Work</option>
+                  <option value="standard_vacation">Vacation</option>
+                  <option value="random">Random</option>
+                  <option value="rest">Rest</option>
+                  <option value="weekend">Weekend</option>
+                </select>
+              </div>
+            );
+          })
+        )}
 
         {PHASES.map((phase) => (
           <React.Fragment key={phase}>
-            <div className="font-medium">{phase}</div>
-            {[...Array(7)].map((_, dayIndex) => {
-              const blocks = getBlocksForPhase(dayIndex, phase);
-              return (
-                <div
-                  key={dayIndex}
-                  className={`border border-gray-800 rounded p-2`}
-                >
-                  {blocks.map((block) => (
-                    <div
-                      key={block.id}
-                      className={`mb-2 last:mb-0 p-2 rounded-lg transition-all duration-200 ${
-                        getActivityStyle(block.activity)
-                      } ${block.completed ? 'opacity-50' : ''} hover:opacity-90`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={block.completed}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            if (block.phase === 'journal') {
-                              setJournalingBlock(block.id);
-                              setJournalEntry({
-                                gratitude: '',
-                                gift: '',
-                                image: undefined,
-                                morningYoga: false,
-                                tenX: false,
-                                oneCoffee: false,
-                                noYoutube: false,
-                                eveningYoga: false,
-                                wishStrangersWell: false
-                              });
-                            } else if (block.phase === 'first_thing') {
-                              setMeditationBlock(block.id);
-                            } else if (block.phase === 'sleep') {
-                              setEditingBlock(block.id);
-                              setEditValue(block.notes || '');
-                            } else if (block.phase !== 'lunch') {
-                              toggleCompleted(block.id, !block.completed);
-                            }
-                          }}
-                          className="appearance-none w-5 h-5 rounded border-2 border-white/30 bg-transparent checked:bg-blue-500 checked:border-blue-500 hover:border-white/50 cursor-pointer relative
-                            after:content-[''] after:w-2.5 after:h-1.5 after:border-white after:border-b-2 after:border-r-2 after:absolute after:rotate-45 after:left-[6px] after:top-[4px] after:opacity-0 checked:after:opacity-100
-                            transition-all duration-100 ease-in-out"
-                        />
-                        <div className="font-medium">{block.activity}</div>
-                        {block.phase === 'sleep' && (
-                          <button
-                            onClick={(e) => {
+            <div className="font-medium group relative">
+              {phase}
+              {showInstructions && (
+                <div className="hidden group-hover:block absolute left-0 top-full mt-2 p-3 bg-gray-800 rounded-lg shadow-xl z-10 w-64">
+                  <p className="text-sm text-gray-300 italic">
+                    {typeof PHASE_LOVE_NOTES[phase] === 'function' ? PHASE_LOVE_NOTES[phase](0) : PHASE_LOVE_NOTES[phase]}
+                  </p>
+                </div>
+              )}
+            </div>
+            {singleDayMode ? (
+              <div className="border border-gray-800 rounded p-2">
+                <div className="text-xs text-gray-400 italic mb-2 px-2">
+                  {typeof PHASE_LOVE_NOTES[phase] === 'function' ? PHASE_LOVE_NOTES[phase](0) : PHASE_LOVE_NOTES[phase]}
+                </div>
+                {getBlocksForPhase(new Date().getDay(), phase).map((block) => (
+                  <div
+                    key={block.id}
+                    className={`mb-2 last:mb-0 p-2 rounded-lg transition-all duration-200 ${
+                      getActivityStyle(block.activity)
+                    } ${block.completed ? 'opacity-50' : ''} hover:opacity-90`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={block.completed}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          if (block.phase === 'journal') {
+                            setJournalingBlock(block.id);
+                            setJournalEntry({
+                              gratitude: '',
+                              gift: '',
+                              image: undefined,
+                              morningYoga: false,
+                              tenX: false,
+                              oneCoffee: false,
+                              noYoutube: false,
+                              eveningYoga: false,
+                              wishStrangersWell: false
+                            });
+                          } else if (block.phase === 'first_thing') {
+                            setMeditationBlock(block.id);
+                          } else if (block.phase !== 'lunch') {
+                            toggleCompleted(block.id, !block.completed);
+                          }
+                        }}
+                        className="appearance-none w-5 h-5 rounded border-2 border-white/30 bg-transparent checked:bg-blue-500 checked:border-blue-500 hover:border-white/50 cursor-pointer relative
+                          after:content-[''] after:w-2.5 after:h-1.5 after:border-white after:border-b-2 after:border-r-2 after:absolute after:rotate-45 after:left-[6px] after:top-[4px] after:opacity-0 checked:after:opacity-100
+                          transition-all duration-100 ease-in-out"
+                      />
+                      <div className="font-medium">{block.activity}</div>
+                    </div>
+
+                    {block.notes && block.phase !== 'sleep' && (
+                      <div className="text-xs mt-1 opacity-80">
+                        {block.notes}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              [...Array(7)].map((_, dayIndex) => {
+                const blocks = getBlocksForPhase(dayIndex, phase);
+                return (
+                  <div
+                    key={dayIndex}
+                    className={`border border-gray-800 rounded p-2`}
+                  >
+                    {blocks.map((block) => (
+                      <div
+                        key={block.id}
+                        className={`mb-2 last:mb-0 p-2 rounded-lg transition-all duration-200 ${
+                          getActivityStyle(block.activity)
+                        } ${block.completed ? 'opacity-50' : ''} hover:opacity-90`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={block.completed}
+                            onChange={(e) => {
                               e.stopPropagation();
-                              setEditingBlock(block.id);
-                              setEditValue(block.notes || '');
+                              if (block.phase === 'journal') {
+                                setJournalingBlock(block.id);
+                                setJournalEntry({
+                                  gratitude: '',
+                                  gift: '',
+                                  image: undefined,
+                                  morningYoga: false,
+                                  tenX: false,
+                                  oneCoffee: false,
+                                  noYoutube: false,
+                                  eveningYoga: false,
+                                  wishStrangersWell: false
+                                });
+                              } else if (block.phase === 'first_thing') {
+                                setMeditationBlock(block.id);
+                              } else if (block.phase !== 'lunch') {
+                                toggleCompleted(block.id, !block.completed);
+                              }
                             }}
-                            className="ml-2 px-2 py-1 text-xs bg-blue-500 hover:bg-blue-400 rounded transition-colors"
-                          >
-                            {block.notes ? `${block.notes}%` : 'Enter Score'}
-                          </button>
+                            className="appearance-none w-5 h-5 rounded border-2 border-white/30 bg-transparent checked:bg-blue-500 checked:border-blue-500 hover:border-white/50 cursor-pointer relative
+                              after:content-[''] after:w-2.5 after:h-1.5 after:border-white after:border-b-2 after:border-r-2 after:absolute after:rotate-45 after:left-[6px] after:top-[4px] after:opacity-0 checked:after:opacity-100
+                              transition-all duration-100 ease-in-out"
+                          />
+                          <div className="font-medium">{block.activity}</div>
+                        </div>
+
+                        {block.notes && block.phase !== 'sleep' && (
+                          <div className="text-xs mt-1 opacity-80">
+                            {block.notes}
+                          </div>
                         )}
                       </div>
-
-                      {block.notes && block.phase !== 'sleep' && (
-                        <div className="text-xs mt-1 opacity-80">
-                          {block.notes}
-                        </div>
-                      )}
-
-                      {block.focus_taps !== undefined && (
-                        <div className="text-xs mt-1 opacity-80">
-                          Focus taps: {block.focus_taps}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
+                    ))}
+                  </div>
+                );
+              })
+            )}
           </React.Fragment>
         ))}
       </div>
@@ -699,6 +773,22 @@ const WeeklySchedule: React.FC<Props> = ({
           </div>
         </div>
       )}
+
+      <div className="mt-12 flex justify-center">
+        <Link 
+          href="/journal"
+          className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          <span className="absolute inset-0 w-full h-full rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 opacity-100 group-hover:opacity-90 transition-opacity"></span>
+          <span className="absolute bottom-0 w-0 h-1 bg-white transition-all duration-200 ease-out group-hover:w-full"></span>
+          <span className="relative flex items-center">
+            Next: Journal
+            <svg className="w-5 h-5 ml-2 -mr-1 transition-transform duration-200 ease-out group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </span>
+        </Link>
+      </div>
     </div>
   );
 };

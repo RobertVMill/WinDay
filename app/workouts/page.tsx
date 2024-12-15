@@ -10,17 +10,92 @@ interface WorkoutEntry {
   date: string;
 }
 
-interface WorkoutSummary {
+interface WorkoutPhase {
+  name: string;
+  description: string;
+}
+
+interface WorkoutType {
   category: string;
   displayName: string;
+  phases?: WorkoutPhase[];
   latestEntry?: WorkoutEntry;
 }
 
 export default function WorkoutsPage() {
-  const [workoutSummaries, setWorkoutSummaries] = useState<WorkoutSummary[]>([
-    { category: 'upper_body', displayName: 'Upper Body Strength' },
-    { category: 'lower_body', displayName: 'Lower Body Strength' },
-    { category: 'endurance', displayName: 'Endurance' }
+  const [workoutSummaries, setWorkoutSummaries] = useState<WorkoutType[]>([
+    { 
+      category: 'upper_body', 
+      displayName: 'Upper Body Strength',
+      phases: [
+        { 
+          name: 'Warm Up (10 min)', 
+          description: 'Break a sweat, activate muscles, prepare for intensity'
+        },
+        { 
+          name: 'Shock Reps', 
+          description: 'Heavy weight, low reps - shock the system'
+        },
+        { 
+          name: 'Performance Sets', 
+          description: 'Push for new records, maximum effort'
+        },
+        { 
+          name: 'Damage Sets', 
+          description: 'High rep ranges, accumulate volume'
+        },
+        { 
+          name: 'Flashy Set', 
+          description: 'Explosive, dynamic movements'
+        },
+        { 
+          name: 'Burnout', 
+          description: 'Push to failure, empty the tank'
+        },
+        { 
+          name: 'Cool Down', 
+          description: 'Stretch and recover'
+        }
+      ]
+    },
+    { 
+      category: 'lower_body', 
+      displayName: 'Lower Body Strength',
+      phases: [
+        { 
+          name: 'Warm Up (10 min)', 
+          description: 'Break a sweat, activate muscles, prepare for intensity'
+        },
+        { 
+          name: 'Shock Reps', 
+          description: 'Heavy weight, low reps - shock the system'
+        },
+        { 
+          name: 'Performance Sets', 
+          description: 'Push for new records, maximum effort'
+        },
+        { 
+          name: 'Damage Sets', 
+          description: 'High rep ranges, accumulate volume'
+        },
+        { 
+          name: 'Flashy Set', 
+          description: 'Explosive, dynamic movements'
+        },
+        { 
+          name: 'Burnout', 
+          description: 'Push to failure, empty the tank'
+        },
+        { 
+          name: 'Cool Down', 
+          description: 'Stretch and recover'
+        }
+      ]
+    },
+    { 
+      category: 'endurance', 
+      displayName: 'Endurance'
+    }
   ]);
 
   const fetchLatestWorkouts = useCallback(async () => {
@@ -79,8 +154,30 @@ export default function WorkoutsPage() {
             >
               <h2 className="text-xl font-semibold mb-4">{summary.displayName}</h2>
               
+              {summary.phases && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-300 mb-3">Workout Phases:</h3>
+                  <div className="space-y-3">
+                    {summary.phases.map((phase, index) => (
+                      <div 
+                        key={phase.name}
+                        className="bg-white/5 p-3 rounded-md border border-gray-200/10"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-blue-400 font-medium">{index + 1}.</span>
+                          <h4 className="text-sm font-medium text-gray-200">{phase.name}</h4>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1 ml-6">
+                          {phase.description}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {summary.latestEntry ? (
-                <div className="space-y-3">
+                <div className="space-y-3 border-t border-gray-200/10 pt-4 mt-4">
                   <p className="text-sm text-gray-400">
                     Last performance: {formatDate(summary.latestEntry.date)}
                   </p>

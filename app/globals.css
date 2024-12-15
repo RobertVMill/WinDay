@@ -39,3 +39,19 @@
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+.shadow-glow-blue {
+  box-shadow: 0 0 8px #4299e1;
+}
+
+.shadow-glow-red {
+  box-shadow: 0 0 8px #e53e3e;
+}
+
+.shadow-glow-purple {
+  box-shadow: 0 0 8px #805ad5;
+}
+
+.shadow-glow-yellow {
+  box-shadow: 0 0 8px #ecc94b;
+}
