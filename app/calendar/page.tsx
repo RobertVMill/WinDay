@@ -2,18 +2,26 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import WeeklySchedule, { ScheduleBlock } from '../components/WeeklySchedule';
-import { getSupabaseBrowser } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 type ViewMode = 'today' | 'week';
 
 interface ScheduleBlockExtended extends ScheduleBlock {
+  id: number;
+  activity: string;
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+  completed: boolean;
+  day_type: string;
+  notes?: string;
   instruction?: string;
+  day_of_week: number;
 }
 
 export default function CalendarPage() {
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlockExtended[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('today');
-  const supabase = getSupabaseBrowser();
 
   const fetchScheduleBlocks = useCallback(async () => {
     try {
@@ -91,27 +99,27 @@ export default function CalendarPage() {
             instruction
           };
         }).filter(Boolean);
-        
+
         setScheduleBlocks(transformedBlocks);
       }
-    } catch (err) {
-      console.error('Error fetching schedule blocks:', err);
+    } catch (error) {
+      console.error('Error in fetchScheduleBlocks:', error);
     }
-  }, [supabase, setScheduleBlocks]);
+  }, []);
 
   useEffect(() => {
     fetchScheduleBlocks();
   }, [fetchScheduleBlocks]);
 
   const getTodayBlocks = () => {
-    const _today = new Date();
+    const today = new Date();
     return scheduleBlocks.filter(block => block.day_type === 'normal');
   };
 
   return (
     <main className="min-h-screen p-4 sm:p-8 bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto">
-        {/* New Title Section */}
+        {/* Title Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">
             Build Your Empire
@@ -163,23 +171,40 @@ export default function CalendarPage() {
           </div>
         )}
 
-        {/* Schedule View with Instructions */}
-        {viewMode === 'week' ? (
-          <WeeklySchedule 
-            scheduleBlocks={scheduleBlocks} 
-            onBlocksUpdate={setScheduleBlocks}
-            showInstructions={true}
-          />
-        ) : (
-          <div className="bg-gray-800/50 rounded-lg p-4 shadow-xl backdrop-blur-sm">
-            <WeeklySchedule 
-              scheduleBlocks={getTodayBlocks()} 
-              onBlocksUpdate={setScheduleBlocks}
-              singleDayMode
-              showInstructions={true}
-            />
-          </div>
-        )}
+        {/* Schedule View */}
+        <div className="bg-gray-800 rounded-xl p-6 shadow-xl">
+          {viewMode === 'today' ? (
+            <div className="space-y-4">
+              {getTodayBlocks().map((block, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-700/50 rounded-lg p-4 hover:bg-gray-700/70 transition-colors"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-lg font-medium text-white">{block.activity}</h3>
+                      <p className="text-sm text-gray-400">
+                        {block.start_time} - {block.end_time}
+                      </p>
+                    </div>
+                    {block.instruction && (
+                      <div className="text-sm text-gray-400 italic">
+                        {block.instruction}
+                      </div>
+                    )}
+                  </div>
+                  {block.notes && (
+                    <div className="mt-2 text-sm text-gray-400">
+                      Note: {block.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <WeeklySchedule blocks={scheduleBlocks} />
+          )}
+        </div>
       </div>
     </main>
   );

@@ -37,7 +37,7 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
       </head>
-      <body className={`${spaceGrotesk.variable} bg-gray-900`}>
+      <body suppressHydrationWarning className={`${spaceGrotesk.variable} bg-gray-900`}>
         <div className="min-h-screen bg-gray-900">
           <Navbar />
           {children}

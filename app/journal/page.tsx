@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '../../lib/supabase';
 import QuoteDisplay from '../components/QuoteDisplay';
 
 interface JournalEntry {
@@ -13,9 +13,13 @@ interface JournalEntry {
   best_day: string | null;
   deep_flow_activity: string | null;
   work_goals: string | null;
-  workout_type?: 'upper_strength' | 'lower_strength' | 'endurance';
+  workout_category?: 'upper_strength' | 'lower_strength' | 'endurance';
   workout_notes?: string;
+  strategy?: string | null;
+  strategy_checks?: any;
+  image_url?: string | null;
 }
+
 export default function JournalPage() {
   const [formData, setFormData] = useState<Partial<JournalEntry>>({
     gratitude: '',
@@ -23,7 +27,7 @@ export default function JournalPage() {
     best_day: '',
     deep_flow_activity: '',
     work_goals: '',
-    workout_type: undefined,
+    workout_category: undefined,
     workout_notes: ''
   });
   const [scoreData, setScoreData] = useState({
@@ -42,49 +46,114 @@ export default function JournalPage() {
   });
   const [showSuccess, setShowSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/check', {
+          method: 'GET',
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          console.log('No active session');
+          router.push('/auth/signin');
+          return;
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        router.push('/auth/signin');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  const checkDatabaseConnection = async () => {
+    try {
+      console.log('Checking database connection...');
+      
+      const response = await fetch('/api/journal/check', {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to connect to database');
+      }
+
+      const data = await response.json();
+      console.log('Successfully connected to database');
+      console.log('Sample data structure:', data);
+
+    } catch (error) {
+      console.error('Connection test failed:', error);
+    }
+  };
+
+  useEffect(() => {
+    checkDatabaseConnection();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setShowSuccess(false);
+    setSubmitStatus('loading');
+    setErrorMessage(null);
 
     try {
-      // Save to journal entries
-      const { error } = await supabase
-        .from('journal_entries')
-        .insert([{ ...formData, date: new Date().toISOString() }]);
+      const now = new Date();
+      const isoDate = now.toISOString();
 
-      if (error) throw error;
+      const response = await fetch('/api/journal/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          journalEntry: {
+            date: isoDate,
+            gratitude: formData.gratitude || null,
+            gifts: formData.gifts || null,
+            best_day: formData.best_day || null,
+            deep_flow_activity: formData.deep_flow_activity || null,
+            work_goals: formData.work_goals || null,
+            workout_category: formData.workout_category || null,
+            workout_notes: formData.workout_notes || null
+          },
+          scoreData: {
+            date: isoDate,
+            sleep_performance: scoreData.sleep_performance,
+            fast_until_noon: scoreData.fast_until_noon,
+            no_p: scoreData.no_p,
+            no_youtube: scoreData.no_youtube,
+            welcoming_clothes: scoreData.welcoming_clothes,
+            childs_pose: scoreData.childs_pose,
+            happiness_raygun: scoreData.happiness_raygun,
+            gut_nourishment: scoreData.gut_nourishment,
+            give_10x: scoreData.give_10x,
+            eat_slowly: scoreData.eat_slowly,
+            one_coffee: scoreData.one_coffee
+          }
+        })
+      });
 
-      // Save to daily_scores
-      const { error: dailyScoreError } = await supabase
-        .from('daily_scores')
-        .insert([{
-          date: new Date().toISOString(),
-          sleep_performance: scoreData.sleep_performance,
-          fast_until_noon: scoreData.fast_until_noon,
-          no_p: scoreData.no_p,
-          no_youtube: scoreData.no_youtube,
-          childs_pose: scoreData.childs_pose,
-          happiness_raygun: scoreData.happiness_raygun,
-          gut_nourishment: scoreData.gut_nourishment,
-          give_10x: scoreData.give_10x,
-          eat_slowly: scoreData.eat_slowly,
-          no_alarm: scoreData.no_alarm,
-          one_coffee: scoreData.one_coffee,
-          welcoming_clothes: scoreData.welcoming_clothes
-        }]);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit entry');
+      }
 
-      if (dailyScoreError) throw dailyScoreError;
-
+      // Reset form data
       setFormData({
         gratitude: '',
         gifts: '',
         best_day: '',
         deep_flow_activity: '',
         work_goals: '',
-        workout_type: undefined,
+        workout_category: undefined,
         workout_notes: ''
       });
 
@@ -103,11 +172,21 @@ export default function JournalPage() {
         welcoming_clothes: false
       });
 
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
+      setSubmitStatus('success');
+      setTimeout(() => setSubmitStatus('idle'), 3000);
       router.refresh();
     } catch (error) {
-      console.error('Error saving journal entry:', error);
+      console.error('Full error details:', error);
+      setSubmitStatus('error');
+      if (error instanceof Error && error.message.includes('auth')) {
+        router.push('/auth/signin');
+      } else {
+        setErrorMessage(
+          error instanceof Error 
+            ? error.message 
+            : 'Failed to submit entry. Please try again.'
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -127,11 +206,35 @@ export default function JournalPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {showSuccess && (
-            <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in-out">
-              Journal entry saved successfully!
-            </div>
-          )}
+          <div className="fixed top-4 right-4 transition-all duration-300 z-50">
+            {submitStatus === 'loading' && (
+              <div className="bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Saving entry...</span>
+              </div>
+            )}
+            
+            {submitStatus === 'success' && (
+              <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-fade-in">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>Entry saved successfully!</span>
+              </div>
+            )}
+            
+            {submitStatus === 'error' && (
+              <div className="bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-fade-in">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                <span>{errorMessage || 'Failed to save entry'}</span>
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-6">
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 shadow-lg">
@@ -210,9 +313,13 @@ export default function JournalPage() {
                       ].map((type) => (
                         <button
                           key={type.id}
-                          onClick={() => handleEntryChange('workout_type', type.id)}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleEntryChange('workout_category', type.id);
+                          }}
                           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            formData.workout_type === type.id
+                            formData.workout_category === type.id
                               ? 'bg-blue-500 text-white'
                               : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700'
                           }`}
@@ -223,7 +330,7 @@ export default function JournalPage() {
                     </div>
                   </div>
 
-                  {formData.workout_type && (
+                  {formData.workout_category && (
                     <div>
                       <label className="block text-sm text-gray-400 mb-2">Performance Notes</label>
                       <textarea
@@ -231,8 +338,8 @@ export default function JournalPage() {
                         onChange={(e) => handleEntryChange('workout_notes', e.target.value)}
                         className="w-full h-32 bg-gray-700/50 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         placeholder={`How did your ${
-                          formData.workout_type === 'upper_strength' ? 'upper body' :
-                          formData.workout_type === 'lower_strength' ? 'lower body' :
+                          formData.workout_category === 'upper_strength' ? 'upper body' :
+                          formData.workout_category === 'lower_strength' ? 'lower body' :
                           'endurance'
                         } workout go?`}
                       />
@@ -438,11 +545,21 @@ export default function JournalPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl shadow-lg transform transition-all duration-200 ${
-                isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 shadow-blue-500/20'
+              className={`w-full sm:w-auto px-8 py-4 bg-blue-600 text-white font-medium rounded-xl shadow-lg transform transition-all duration-200 ${
+                isSubmitting 
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:scale-105 hover:bg-blue-500 shadow-blue-500/20'
               }`}
             >
-              {isSubmitting ? 'Saving...' : 'Save Entry'}
+              <div className="flex items-center justify-center space-x-2">
+                {isSubmitting && (
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                <span>{isSubmitting ? 'Saving...' : 'Save Entry'}</span>
+              </div>
             </button>
           </div>
         </form>
